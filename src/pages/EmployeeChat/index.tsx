@@ -37,7 +37,7 @@ export function EmployeeChat() {
     const gatewayStatus = useGatewayStore((s) => s.status);
     const isGatewayRunning = gatewayStatus.state === 'running';
 
-    const { agents } = useAgentsStore();
+    const { agents, setAgentStatus } = useAgentsStore();
     const agent = agents.find(a => a.id === agentId);
 
     const messages = useChatStore((s) => s.messages);
@@ -139,6 +139,19 @@ export function EmployeeChat() {
             setStreamingTimestamp(0);
         }
     }, [sending, streamingTimestamp]);
+
+    // 根据发送状态更新 agent 的在线状态
+    useEffect(() => {
+        if (!agentId) return;
+
+        if (sending) {
+            // 发送消息时设置为"工作中"
+            setAgentStatus(agentId, 'busy');
+        } else {
+            // 发送完成后恢复"在线"状态
+            setAgentStatus(agentId, 'idle');
+        }
+    }, [sending, agentId, setAgentStatus]);
 
     if (!agent) {
         return (

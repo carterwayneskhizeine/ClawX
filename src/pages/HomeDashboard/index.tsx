@@ -301,11 +301,9 @@ function AgentCard({ agent, onDelete, onClick }: { agent: Agent; onDelete: () =>
 
                 <p className={cn(
                     "text-xs line-clamp-2 w-full leading-relaxed overflow-hidden text-ellipsis text-center",
-                    agent.status === 'idle' ? "text-green-500 dark:text-green-400" :
-                        agent.status === 'busy' ? "text-[#F4B400] dark:text-amber-400" :
-                            "text-red-500 dark:text-red-400"
+                    agent.status === 'idle' ? "text-green-500 dark:text-green-400" : "text-[#F4B400] dark:text-amber-400"
                 )}>
-                    {agent.status === 'idle' ? '在线' : agent.status === 'busy' ? '忙碌' : '离线'}
+                    {agent.status === 'idle' ? '在线' : '工作中'}
                 </p>
 
                 <div className="absolute top-2 right-2">

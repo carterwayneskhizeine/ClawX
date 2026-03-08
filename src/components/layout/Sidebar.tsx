@@ -375,11 +375,7 @@ export function Sidebar() {
                             <div
                               className={cn(
                                 'absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-background',
-                                agent.status === 'idle'
-                                  ? 'bg-green-500'
-                                  : agent.status === 'busy'
-                                    ? 'bg-amber-500'
-                                    : 'bg-red-500'
+                                agent.status === 'idle' ? 'bg-green-500' : 'bg-amber-500'
                               )}
                             />
                           </div>

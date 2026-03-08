@@ -28,6 +28,7 @@ interface AgentsState {
     }) => Promise<void>;
     updateAgent: (agentId: string, params: { name?: string; avatar?: string }) => Promise<void>;
     deleteAgent: (agentId: string) => Promise<void>;
+    setAgentStatus: (agentId: string, status: 'idle' | 'busy') => void;
 }
 
 // 触发 agent 列表更新事件（供 Sidebar 等组件监听）
@@ -60,7 +61,9 @@ export const useAgentsStore = create<AgentsState>((set, get) => ({
                 name: agent.identity?.name || agent.name || (agent.id === 'main' ? '通用助手' : agent.id),
                 workspace: agent.workspace,
                 identity: agent.identity,
-                status: agent.id === 'main' ? 'idle' : 'offline',
+                // 所有在 Gateway 中存在的 agent 都默认为 idle（在线）
+                // 只有当 Gateway 返回明确的状态信息时才有 busy
+                status: 'idle' as const,
             }));
 
             // 如果 Gateway 没有返回任何 agent，添加默认的 main agent
@@ -172,5 +175,14 @@ export const useAgentsStore = create<AgentsState>((set, get) => ({
         } finally {
             set({ loading: false });
         }
+    },
+
+    // 设置 agent 状态（用于在对话时显示"工作中"状态）
+    setAgentStatus: (agentId, status) => {
+        set((state) => ({
+            agents: state.agents.map((agent) =>
+                agent.id === agentId ? { ...agent, status } : agent
+            ),
+        }));
     },
 }));
