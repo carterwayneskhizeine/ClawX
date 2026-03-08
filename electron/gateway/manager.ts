@@ -11,6 +11,8 @@ import { PORTS } from '../utils/config';
 import {
   getOpenClawDir,
   getOpenClawEntryPath,
+  getOpenClawConfigDir,
+  getOpenClawHomeDir,
   isOpenClawPresent,
   appendNodeRequireToNodeOptions,
 } from '../utils/paths';
@@ -1055,10 +1057,13 @@ export class GatewayManager extends EventEmitter {
         PATH: finalPath,
         ...uvEnv,
         OPENCLAW_NO_RESPAWN: '1',
+        HOME: getOpenClawHomeDir(),
+        USERPROFILE: getOpenClawHomeDir(),
+        OPENCLAW_HOME: getOpenClawHomeDir(),
       };
 
       const child = utilityProcess.fork(entryScript, doctorArgs, {
-        cwd: openclawDir,
+        cwd: getOpenClawConfigDir(),
         stdio: 'pipe',
         env: forkEnv as NodeJS.ProcessEnv,
       });
@@ -1301,6 +1306,9 @@ export class GatewayManager extends EventEmitter {
         OPENCLAW_GATEWAY_TOKEN: gatewayToken,
         OPENCLAW_SKIP_CHANNELS: '',
         CLAWDBOT_SKIP_CHANNELS: '',
+        HOME: getOpenClawHomeDir(),
+        USERPROFILE: getOpenClawHomeDir(),
+        OPENCLAW_HOME: getOpenClawHomeDir(),
         // Prevent OpenClaw from respawning itself inside the utility process
         OPENCLAW_NO_RESPAWN: '1',
       };

@@ -14,7 +14,7 @@ import {
 import { spawn } from 'node:child_process';
 import { homedir } from 'node:os';
 import { join, dirname } from 'node:path';
-import { getOpenClawDir, getOpenClawEntryPath } from './paths';
+import { getOpenClawDir, getOpenClawEntryPath, getOpenClawHomeDir } from './paths';
 import { logger } from './logger';
 
 // ── Quoting helpers ──────────────────────────────────────────────────────────
@@ -266,6 +266,7 @@ export function generateCompletionCache(): void {
       ELECTRON_RUN_AS_NODE: '1',
       OPENCLAW_NO_RESPAWN: '1',
       OPENCLAW_EMBEDDED_IN: 'ClawX',
+      OPENCLAW_HOME: getOpenClawHomeDir(),
     },
     stdio: 'ignore',
     detached: false,
@@ -303,6 +304,7 @@ export function installCompletionToProfile(): void {
         ELECTRON_RUN_AS_NODE: '1',
         OPENCLAW_NO_RESPAWN: '1',
         OPENCLAW_EMBEDDED_IN: 'ClawX',
+        OPENCLAW_HOME: getOpenClawHomeDir(),
       },
       stdio: 'ignore',
       detached: false,

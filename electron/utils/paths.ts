@@ -27,10 +27,17 @@ export function expandPath(path: string): string {
 }
 
 /**
+ * Get OpenClaw home directory (parent of .openclaw config dir)
+ */
+export function getOpenClawHomeDir(): string {
+  return 'D:\\TheClaw';
+}
+
+/**
  * Get OpenClaw config directory
  */
 export function getOpenClawConfigDir(): string {
-  return join(homedir(), '.openclaw');
+  return 'D:\\TheClaw\\.openclaw';
 }
 
 /**
