@@ -36,7 +36,9 @@ import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { MOCK_USER, MOCK_COMPUTE_LOGS, RECHARGE_PLANS } from './constants';
 import type { ComputeLog } from './types';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 
+const ITEMS_PER_PAGE = 10;
 const DATA_30_DAYS = Array.from({ length: 30 }, (_, i) => ({
     day: i + 1,
     usage: Math.floor(Math.random() * 500) + 100
@@ -47,6 +49,11 @@ export function ComputePoints() {
     const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
     const [logs, setLogs] = useState<ComputeLog[]>(MOCK_COMPUTE_LOGS);
     const [userPoints, setUserPoints] = useState(MOCK_USER.points);
+    const [currentPage, setCurrentPage] = useState(1);
+
+    const totalPages = Math.ceil(logs.length / ITEMS_PER_PAGE);
+    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+    const paginatedLogs = logs.slice(startIndex, startIndex + ITEMS_PER_PAGE);
 
     const handleRecharge = () => {
         if (!selectedPlan) return;
@@ -137,7 +144,17 @@ export function ComputePoints() {
                                     formatter={(value: number) => [value.toLocaleString(), '消耗量']}
                                     labelFormatter={(label) => `日期: ${label}日`}
                                 />
-                                <Area type="monotone" dataKey="usage" stroke="#1677ff" fillOpacity={1} fill="url(#colorUsage)" strokeWidth={3} />
+                                <Area
+                                    type="monotone"
+                                    dataKey="usage"
+                                    stroke="#1677ff"
+                                    fillOpacity={1}
+                                    fill="url(#colorUsage)"
+                                    strokeWidth={3}
+                                    isAnimationActive={true}
+                                    animationDuration={1500}
+                                    animationBegin={300}
+                                />
                             </AreaChart>
                         </ResponsiveContainer>
                     </div>
@@ -164,7 +181,7 @@ export function ComputePoints() {
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {logs.map((record) => (
+                            {paginatedLogs.map((record) => (
                                 <TableRow key={record.id} className="border-slate-50 dark:border-white/5">
                                     <TableCell className="font-medium text-slate-800 dark:text-slate-100">{record.taskName}</TableCell>
                                     <TableCell>
@@ -188,6 +205,60 @@ export function ComputePoints() {
                             ))}
                         </TableBody>
                     </Table>
+                </div>
+                {/* Pagination Controls */}
+                <div className="px-8 py-4 border-t border-slate-100 dark:border-white/5 flex items-center justify-between bg-slate-50/30 dark:bg-white/5">
+                    <div className="text-xs text-slate-500 font-medium">
+                        共 {logs.length} 条记录，第 {currentPage} / {totalPages} 页
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-8 w-8 p-0 rounded-lg border-slate-200 dark:border-white/10"
+                            onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                            disabled={currentPage === 1}
+                        >
+                            <ChevronLeft className="h-4 w-4" />
+                        </Button>
+                        <div className="flex items-center gap-1">
+                            {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                                // Simple pagination logic to show current and surrounding pages
+                                let pageNum = currentPage;
+                                if (totalPages <= 5) {
+                                    pageNum = i + 1;
+                                } else {
+                                    if (currentPage <= 3) pageNum = i + 1;
+                                    else if (currentPage >= totalPages - 2) pageNum = totalPages - 4 + i;
+                                    else pageNum = currentPage - 2 + i;
+                                }
+
+                                return (
+                                    <Button
+                                        key={pageNum}
+                                        variant={currentPage === pageNum ? "default" : "ghost"}
+                                        size="sm"
+                                        className={cn(
+                                            "h-8 w-8 p-0 rounded-lg text-xs font-bold",
+                                            currentPage !== pageNum && "text-slate-500"
+                                        )}
+                                        onClick={() => setCurrentPage(pageNum)}
+                                    >
+                                        {pageNum}
+                                    </Button>
+                                );
+                            })}
+                        </div>
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-8 w-8 p-0 rounded-lg border-slate-200 dark:border-white/10"
+                            onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                            disabled={currentPage === totalPages}
+                        >
+                            <ChevronRight className="h-4 w-4" />
+                        </Button>
+                    </div>
                 </div>
             </Card>
 

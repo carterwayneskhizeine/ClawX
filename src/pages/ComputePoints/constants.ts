@@ -28,8 +28,8 @@ const generateMockLogs = (): ComputeLog[] => {
         logs.push({
             id: `L${i + 1}`,
             taskName,
-            startTime: `2023-10-${27 - Math.floor(i / 5)} 10:00`,
-            endTime: `2023-10-${27 - Math.floor(i / 5)} 10:${duration < 10 ? '0' + duration : duration}`,
+            startTime: `2026-03-${27 - Math.floor(i / 5)} 10:00`,
+            endTime: `2026-03-${27 - Math.floor(i / 5)} 10:${duration < 10 ? '0' + duration : duration}`,
             duration: `${duration}min`,
             points,
             remainingPoints: currentRemaining
