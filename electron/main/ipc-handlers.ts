@@ -211,6 +211,71 @@ export function registerIpcHandlers(
 
   // File staging handlers (upload/send separation)
   registerFileHandlers();
+
+  // Agent UI refactor handlers
+  registerAgentRefactorHandlers();
+}
+
+/**
+ * Register handlers for Agent UI refactoring (file operations)
+ */
+function registerAgentRefactorHandlers(): void {
+  ipcMain.handle('agent:cleanupFiles', async (_, { agentId }) => {
+    logger.info(`Cleaning up files for agent: ${agentId}`);
+    try {
+      const openclawDir = getOpenClawDir();
+      const workspaceDir = join(openclawDir, `workspace-${agentId}`);
+      const agentConfigDir = join(openclawDir, 'agents', agentId);
+
+      if (existsSync(workspaceDir)) {
+        logger.info(`Removing workspace: ${workspaceDir}`);
+        rmSync(workspaceDir, { recursive: true, force: true });
+      }
+
+      if (existsSync(agentConfigDir)) {
+        logger.info(`Removing agent config dir: ${agentConfigDir}`);
+        rmSync(agentConfigDir, { recursive: true, force: true });
+      }
+
+      return { success: true };
+    } catch (err) {
+      logger.error(`Failed to cleanup agent files for ${agentId}:`, err);
+      throw err;
+    }
+  });
+
+  ipcMain.handle('agent:copyTemplates', async (_, { agentId, workspaceDir }) => {
+    logger.info(`Copying templates for agent: ${agentId} into ${workspaceDir}`);
+    try {
+      const openclawDir = getOpenClawDir();
+      const themdDir = join(openclawDir, 'themd');
+
+      if (!existsSync(themdDir)) {
+        logger.warn(`Templates directory not found: ${themdDir}`);
+        return { success: false, error: 'Templates directory not found' };
+      }
+
+      const templates = ['AGENTS.md', 'USER.md', 'TOOLS.md'];
+
+      if (!existsSync(workspaceDir)) {
+        mkdirSync(workspaceDir, { recursive: true });
+      }
+
+      for (const file of templates) {
+        const src = join(themdDir, file);
+        const dst = join(workspaceDir, file);
+        if (existsSync(src)) {
+          logger.info(`Copying ${file} to ${dst}`);
+          cpSync(src, dst);
+        }
+      }
+
+      return { success: true };
+    } catch (err) {
+      logger.error(`Failed to copy templates for agent ${agentId}:`, err);
+      throw err;
+    }
+  });
 }
 
 function mapAppErrorCode(error: unknown): AppResponse['error']['code'] {

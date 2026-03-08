@@ -17,10 +17,26 @@ import {
   Terminal,
   ExternalLink,
   Trash2,
+  Users,
+  ShoppingBag,
+  GraduationCap,
+  Zap,
+  User,
+  LogOut,
+  MoreHorizontal,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useSettingsStore } from '@/stores/settings';
 import { useChatStore } from '@/stores/chat';
+import { useAgentsStore } from '@/stores/agents';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
@@ -98,6 +114,10 @@ export function Sidebar() {
   const sidebarCollapsed = useSettingsStore((state) => state.sidebarCollapsed);
   const setSidebarCollapsed = useSettingsStore((state) => state.setSidebarCollapsed);
   const devModeUnlocked = useSettingsStore((state) => state.devModeUnlocked);
+  const uiMode = useSettingsStore((state) => state.uiMode);
+
+  const agents = useAgentsStore((state) => state.agents);
+  const fetchAgents = useAgentsStore((state) => state.fetchAgents);
 
   const sessions = useChatStore((s) => s.sessions);
   const currentSessionKey = useChatStore((s) => s.currentSessionKey);
@@ -140,6 +160,13 @@ export function Sidebar() {
     }, 60 * 1000);
     return () => window.clearInterval(timer);
   }, []);
+
+  useEffect(() => {
+    if (uiMode === 'new') {
+      fetchAgents();
+    }
+  }, [uiMode, fetchAgents]);
+
   const sessionBuckets: Array<{ key: SessionBucketKey; label: string; sessions: typeof sessions }> = [
     { key: 'today', label: t('chat:historyBuckets.today'), sessions: [] },
     { key: 'yesterday', label: t('chat:historyBuckets.yesterday'), sessions: [] },
@@ -168,6 +195,14 @@ export function Sidebar() {
     { to: '/settings', icon: <Settings className="h-5 w-5" />, label: t('sidebar.settings') },
   ];
 
+  const newNavItems = [
+    { to: '/', icon: <Home className="h-5 w-5" />, label: '首页' },
+    { to: '/shop', icon: <ShoppingBag className="h-5 w-5" />, label: '技能商店' },
+    { to: '/classroom', icon: <GraduationCap className="h-5 w-5" />, label: '学习课堂' },
+    { to: '/points', icon: <Zap className="h-5 w-5" />, label: '算力积分' },
+    { to: '/sys-settings', icon: <Settings className="h-5 w-5" />, label: '系统设置' },
+  ];
+
   return (
     <aside
       className={cn(
@@ -177,82 +212,167 @@ export function Sidebar() {
     >
       {/* Navigation */}
       <nav className="flex-1 overflow-hidden flex flex-col p-2 gap-1">
-        {/* Chat nav item: acts as "New Chat" button, never highlighted as active */}
-        <button
-          onClick={() => {
-            const { messages } = useChatStore.getState();
-            if (messages.length > 0) newSession();
-            navigate('/');
-          }}
-          className={cn(
-            'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
-            'hover:bg-accent hover:text-accent-foreground text-muted-foreground',
-            sidebarCollapsed && 'justify-center px-2',
-          )}
-        >
-          <MessageSquare className="h-5 w-5 shrink-0" />
-          {!sidebarCollapsed && <span className="flex-1 text-left">{t('sidebar.newChat')}</span>}
-        </button>
+        {uiMode === 'classic' ? (
+          <>
+            {/* Chat nav item: acts as "New Chat" button, never highlighted as active */}
+            <button
+              onClick={() => {
+                const { messages } = useChatStore.getState();
+                if (messages.length > 0) newSession();
+                navigate('/');
+              }}
+              className={cn(
+                'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
+                'hover:bg-accent hover:text-accent-foreground text-muted-foreground',
+                sidebarCollapsed && 'justify-center px-2',
+              )}
+            >
+              <MessageSquare className="h-5 w-5 shrink-0" />
+              {!sidebarCollapsed && <span className="flex-1 text-left">{t('sidebar.newChat')}</span>}
+            </button>
 
-        {navItems.map((item) => (
-          <NavItem
-            key={item.to}
-            {...item}
-            collapsed={sidebarCollapsed}
-          />
-        ))}
-
-        {/* Session list — below Settings, only when expanded */}
-        {!sidebarCollapsed && sessions.length > 0 && (
-          <div className="mt-1 overflow-y-auto max-h-72 space-y-0.5">
-            {sessionBuckets.map((bucket) => (
-              bucket.sessions.length > 0 ? (
-                <div key={bucket.key} className="pt-1">
-                  <div className="px-3 py-1 text-[11px] font-medium text-muted-foreground/80">
-                    {bucket.label}
-                  </div>
-                  {bucket.sessions.map((s) => (
-                    <div key={s.key} className="group relative flex items-center">
-                      <button
-                        onClick={() => { switchSession(s.key); navigate('/'); }}
-                        className={cn(
-                          'w-full text-left rounded-md px-3 py-1.5 text-sm truncate transition-colors pr-7',
-                          'hover:bg-accent hover:text-accent-foreground',
-                          isOnChat && currentSessionKey === s.key
-                            ? 'bg-accent/60 text-accent-foreground font-medium'
-                            : 'text-muted-foreground',
-                        )}
-                      >
-                        {getSessionLabel(s.key, s.displayName, s.label)}
-                      </button>
-                      <button
-                        aria-label="Delete session"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setSessionToDelete({
-                            key: s.key,
-                            label: getSessionLabel(s.key, s.displayName, s.label),
-                          });
-                        }}
-                        className={cn(
-                          'absolute right-1 flex items-center justify-center rounded p-0.5 transition-opacity',
-                          'opacity-0 group-hover:opacity-100',
-                          'text-muted-foreground hover:text-destructive hover:bg-destructive/10',
-                        )}
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              ) : null
+            {navItems.map((item) => (
+              <NavItem
+                key={item.to}
+                {...item}
+                collapsed={sidebarCollapsed}
+              />
             ))}
-          </div>
+
+            {/* Session list — below Settings, only when expanded */}
+            {!sidebarCollapsed && sessions.length > 0 && (
+              <div className="mt-1 overflow-y-auto max-h-72 space-y-0.5">
+                {sessionBuckets.map((bucket) => (
+                  bucket.sessions.length > 0 ? (
+                    <div key={bucket.key} className="pt-1">
+                      <div className="px-3 py-1 text-[11px] font-medium text-muted-foreground/80">
+                        {bucket.label}
+                      </div>
+                      {bucket.sessions.map((s) => (
+                        <div key={s.key} className="group relative flex items-center">
+                          <button
+                            onClick={() => { switchSession(s.key); navigate('/'); }}
+                            className={cn(
+                              'w-full text-left rounded-md px-3 py-1.5 text-sm truncate transition-colors pr-7',
+                              'hover:bg-accent hover:text-accent-foreground',
+                              isOnChat && currentSessionKey === s.key
+                                ? 'bg-accent/60 text-accent-foreground font-medium'
+                                : 'text-muted-foreground',
+                            )}
+                          >
+                            {getSessionLabel(s.key, s.displayName, s.label)}
+                          </button>
+                          <button
+                            aria-label="Delete session"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSessionToDelete({
+                                key: s.key,
+                                label: getSessionLabel(s.key, s.displayName, s.label),
+                              });
+                            }}
+                            className={cn(
+                              'absolute right-1 flex items-center justify-center rounded p-0.5 transition-opacity',
+                              'opacity-0 group-hover:opacity-100',
+                              'text-muted-foreground hover:text-destructive hover:bg-destructive/10',
+                            )}
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  ) : null
+                ))}
+              </div>
+            )}
+          </>
+        ) : (
+          <>
+            <NavItem
+              key={newNavItems[0].to}
+              {...newNavItems[0]}
+              collapsed={sidebarCollapsed}
+            />
+
+            {!sidebarCollapsed && <div className="my-2 border-t border-muted/20" />}
+
+            {/* Digital Employees SubMenu */}
+            <div className="flex flex-col gap-1">
+              {!sidebarCollapsed && (
+                <div className="flex items-center gap-2 px-3 py-1 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                  <Users className="h-3 w-3" />
+                  <span>数字员工</span>
+                </div>
+              )}
+              <div className="flex flex-col gap-1 max-h-[40vh] overflow-y-auto pr-1">
+                {agents.map((agent) => (
+                  <NavItem
+                    key={agent.id}
+                    to={`/employee/${agent.id}`}
+                    icon={
+                      <div className="relative">
+                        <span className="text-xl shrink-0 group-hover:scale-110 transition-transform">
+                          {agent.identity?.emoji || '🤖'}
+                        </span>
+                        <div className={cn(
+                          "absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-background",
+                          agent.status === 'idle' ? "bg-green-500" :
+                            agent.status === 'busy' ? "bg-amber-500" : "bg-red-500"
+                        )} />
+                      </div>
+                    }
+                    label={agent.identity?.name || agent.name || agent.id}
+                    collapsed={sidebarCollapsed}
+                  />
+                ))}
+              </div>
+            </div>
+
+            {!sidebarCollapsed && <div className="my-2 border-t border-muted/20" />}
+
+            {newNavItems.slice(1).map((item) => (
+              <NavItem
+                key={item.to}
+                {...item}
+                collapsed={sidebarCollapsed}
+              />
+            ))}
+          </>
         )}
       </nav>
 
       {/* Footer */}
-      <div className="p-2 space-y-2">
+      <div className="p-2 space-y-1">
+        {uiMode === 'new' && !sidebarCollapsed && (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button className="flex w-full items-center gap-3 rounded-lg p-2 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground">
+                <Avatar className="h-8 w-8 rounded-lg overflow-hidden border border-muted-foreground/10 bg-muted">
+                  <AvatarImage src="https://picsum.photos/seed/user123/200" alt="User" />
+                  <AvatarFallback className="rounded-lg"><User className="h-4 w-4" /></AvatarFallback>
+                </Avatar>
+                <div className="flex flex-col items-start min-w-0">
+                  <span className="truncate w-full font-semibold">User Admin</span>
+                  <span className="truncate w-full text-[10px] text-muted-foreground">Premium Account</span>
+                </div>
+                <MoreHorizontal className="ml-auto h-4 w-4 text-muted-foreground" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56" side="right">
+              <DropdownMenuItem onClick={() => navigate('/profile')}>
+                <User className="mr-2 h-4 w-4" />
+                <span>我的信息</span>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem className="text-destructive focus:text-destructive">
+                <LogOut className="mr-2 h-4 w-4" />
+                <span>退出登录</span>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
+
         {devModeUnlocked && !sidebarCollapsed && (
           <Button
             variant="ghost"

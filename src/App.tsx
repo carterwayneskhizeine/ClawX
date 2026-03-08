@@ -20,6 +20,20 @@ import { useSettingsStore } from './stores/settings';
 import { useGatewayStore } from './stores/gateway';
 import { applyGatewayTransportPreference } from './lib/api-client';
 
+// Shared Layout for New UI
+import { NewMainLayout } from './components/layout/NewMainLayout';
+
+// New Pages
+import { HomeDashboard } from './pages/HomeDashboard';
+import { EmployeeChat } from './pages/EmployeeChat';
+import { Shop } from './pages/Shop';
+import { Classroom } from './pages/Classroom';
+import { ComputePoints } from './pages/ComputePoints';
+import { SysSettings } from './pages/SysSettings';
+import { Profile } from './pages/Profile';
+import { LoginModal } from './components/auth/LoginModal';
+import { useAuthStore } from './stores/auth';
+
 
 /**
  * Error Boundary to catch and display React rendering errors
@@ -93,7 +107,16 @@ function App() {
   const language = useSettingsStore((state) => state.language);
   const gatewayTransportPreference = useSettingsStore((state) => state.gatewayTransportPreference);
   const setupComplete = useSettingsStore((state) => state.setupComplete);
+  const uiMode = useSettingsStore((state) => state.uiMode);
+  const setUiMode = useSettingsStore((state) => state.setUiMode);
   const initGateway = useGatewayStore((state) => state.init);
+
+  const token = useAuthStore((state) => state.token);
+  const isLocalMode = useAuthStore((state) => state.isLocalMode);
+  const setToken = useAuthStore((state) => state.setToken);
+  const setLocalMode = useAuthStore((state) => state.setLocalMode);
+
+  const isAuthenticated = !!token || isLocalMode;
 
   useEffect(() => {
     initSettings();
@@ -136,6 +159,51 @@ function App() {
     };
   }, [navigate]);
 
+  // UI Mode Toggle (Ctrl+P)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'p') {
+        e.preventDefault();
+        setUiMode(uiMode === 'new' ? 'classic' : 'new');
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [uiMode, setUiMode]);
+
+  // Handle path remapping when UI mode switches
+  useEffect(() => {
+    const currentPath = location.pathname;
+
+    if (uiMode === 'classic') {
+      // If switching to Classic while on a New-only route
+      const isNewOnlyRoute =
+        ['/shop', '/classroom', '/points', '/sys-settings', '/profile'].some(p => currentPath.startsWith(p)) ||
+        currentPath.startsWith('/employee/');
+
+      if (isNewOnlyRoute) {
+        if (currentPath === '/sys-settings') {
+          navigate('/settings');
+        } else {
+          navigate('/');
+        }
+      }
+    } else {
+      // If switching to New while on a Classic-only route
+      const isClassicOnlyRoute = ['/dashboard', '/channels', '/skills', '/cron', '/settings'].some(p =>
+        currentPath.startsWith(p)
+      );
+
+      if (isClassicOnlyRoute) {
+        if (currentPath.startsWith('/settings')) {
+          navigate('/sys-settings');
+        } else {
+          navigate('/');
+        }
+      }
+    }
+  }, [uiMode, navigate, location.pathname]);
+
   // Apply theme
   useEffect(() => {
     const root = window.document.documentElement;
@@ -155,6 +223,15 @@ function App() {
     applyGatewayTransportPreference(gatewayTransportPreference);
   }, [gatewayTransportPreference]);
 
+  if (!isAuthenticated && uiMode === 'new') {
+    return (
+      <LoginModal
+        onSuccess={(token) => setToken(token)}
+        onLocalMode={() => setLocalMode(true)}
+      />
+    );
+  }
+
   return (
     <ErrorBoundary>
       <TooltipProvider delayDuration={300}>
@@ -163,15 +240,32 @@ function App() {
           <Route path="/setup/*" element={<Setup />} />
 
           {/* Main application routes */}
-          <Route element={<MainLayout />}>
-            <Route path="/" element={<Chat />} />
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/channels" element={<Channels />} />
-            <Route path="/skills" element={<Skills />} />
-            <Route path="/cron" element={<Cron />} />
-            <Route path="/settings/*" element={<Settings />} />
-          </Route>
+          {uiMode === 'new' ? (
+            <Route element={<NewMainLayout />}>
+              <Route path="/" element={<HomeDashboard />} />
+              <Route path="/employee/:id" element={<EmployeeChat />} />
+              <Route path="/shop" element={<Shop />} />
+              <Route path="/classroom" element={<Classroom />} />
+              <Route path="/points" element={<ComputePoints />} />
+              <Route path="/sys-settings" element={<SysSettings />} />
+              <Route path="/profile" element={<Profile />} />
+            </Route>
+          ) : (
+            <Route element={<MainLayout />}>
+              <Route path="/" element={<Chat />} />
+              <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/channels" element={<Channels />} />
+              <Route path="/skills" element={<Skills />} />
+              <Route path="/cron" element={<Cron />} />
+              <Route path="/settings/*" element={<Settings />} />
+            </Route>
+          )}
         </Routes>
+
+        {/* Mode Indicator */}
+        <div className="fixed bottom-2 left-1/2 -translate-x-1/2 z-[99999] px-3 py-1 rounded-full bg-black/60 text-white text-[11px] pointer-events-none opacity-40 select-none">
+          Ctrl+P 切换 UI · 当前: {uiMode === 'new' ? '新版' : '经典'}
+        </div>
 
         {/* Global toast notifications */}
         <Toaster

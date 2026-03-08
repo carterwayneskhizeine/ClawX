@@ -37,6 +37,7 @@ interface SettingsState {
   // UI State
   sidebarCollapsed: boolean;
   devModeUnlocked: boolean;
+  uiMode: 'classic' | 'new';
 
   // Setup
   setupComplete: boolean;
@@ -61,6 +62,7 @@ interface SettingsState {
   setAutoDownloadUpdate: (value: boolean) => void;
   setSidebarCollapsed: (value: boolean) => void;
   setDevModeUnlocked: (value: boolean) => void;
+  setUiMode: (mode: 'classic' | 'new') => void;
   markSetupComplete: () => void;
   resetSettings: () => void;
 }
@@ -89,6 +91,7 @@ const defaultSettings = {
   autoDownloadUpdate: false,
   sidebarCollapsed: false,
   devModeUnlocked: false,
+  uiMode: 'new' as 'classic' | 'new',
   setupComplete: false,
 };
 
@@ -111,11 +114,11 @@ export const useSettingsStore = create<SettingsState>()(
       },
 
       setTheme: (theme) => set({ theme }),
-      setLanguage: (language) => { i18n.changeLanguage(language); set({ language }); void invokeIpc('settings:set', 'language', language).catch(() => {}); },
+      setLanguage: (language) => { i18n.changeLanguage(language); set({ language }); void invokeIpc('settings:set', 'language', language).catch(() => { }); },
       setStartMinimized: (startMinimized) => set({ startMinimized }),
       setLaunchAtStartup: (launchAtStartup) => set({ launchAtStartup }),
-      setGatewayAutoStart: (gatewayAutoStart) => { set({ gatewayAutoStart }); void invokeIpc('settings:set', 'gatewayAutoStart', gatewayAutoStart).catch(() => {}); },
-      setGatewayPort: (gatewayPort) => { set({ gatewayPort }); void invokeIpc('settings:set', 'gatewayPort', gatewayPort).catch(() => {}); },
+      setGatewayAutoStart: (gatewayAutoStart) => { set({ gatewayAutoStart }); void invokeIpc('settings:set', 'gatewayAutoStart', gatewayAutoStart).catch(() => { }); },
+      setGatewayPort: (gatewayPort) => { set({ gatewayPort }); void invokeIpc('settings:set', 'gatewayPort', gatewayPort).catch(() => { }); },
       setProxyEnabled: (proxyEnabled) => set({ proxyEnabled }),
       setProxyServer: (proxyServer) => set({ proxyServer }),
       setProxyHttpServer: (proxyHttpServer) => set({ proxyHttpServer }),
@@ -124,13 +127,14 @@ export const useSettingsStore = create<SettingsState>()(
       setProxyBypassRules: (proxyBypassRules) => set({ proxyBypassRules }),
       setGatewayTransportPreference: (gatewayTransportPreference) => {
         set({ gatewayTransportPreference });
-        void invokeIpc('settings:set', 'gatewayTransportPreference', gatewayTransportPreference).catch(() => {});
+        void invokeIpc('settings:set', 'gatewayTransportPreference', gatewayTransportPreference).catch(() => { });
       },
       setUpdateChannel: (updateChannel) => set({ updateChannel }),
       setAutoCheckUpdate: (autoCheckUpdate) => set({ autoCheckUpdate }),
       setAutoDownloadUpdate: (autoDownloadUpdate) => set({ autoDownloadUpdate }),
       setSidebarCollapsed: (sidebarCollapsed) => set({ sidebarCollapsed }),
       setDevModeUnlocked: (devModeUnlocked) => set({ devModeUnlocked }),
+      setUiMode: (uiMode) => { set({ uiMode }); void invokeIpc('settings:set', 'uiMode', uiMode).catch(() => { }); },
       markSetupComplete: () => set({ setupComplete: true }),
       resetSettings: () => set(defaultSettings),
     }),

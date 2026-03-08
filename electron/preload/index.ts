@@ -136,6 +136,9 @@ const electronAPI = {
         'openclaw:getConfigDir',
         'openclaw:getSkillsDir',
         'openclaw:getCliCommand',
+        // Agent UI Refactor
+        'agent:cleanupFiles',
+        'agent:copyTemplates',
       ];
 
       if (validChannels.includes(channel)) {
