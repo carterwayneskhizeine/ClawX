@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm run build --workspace=ui-react-prod)",
+      "Bash(pnpm run typecheck)"
+    ]
+  }
+}

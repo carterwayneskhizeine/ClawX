@@ -8,7 +8,8 @@ import {
     ChevronRight,
     PieChart as PieChartIcon,
     BarChart3,
-    Search
+    Search,
+    Settings
 } from 'lucide-react';
 import { useAgentsStore, Agent } from '@/stores/agents';
 import { Button } from '@/components/ui/button';
@@ -22,13 +23,24 @@ import {
     DropdownMenuItem,
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { AgentFormDialog } from '@/components/common/AgentFormDialog';
+import { AgentManageDialog } from '@/components/common/AgentManageDialog';
+import { AgentAdvancedConfigDialog } from '@/components/common/AgentAdvancedConfigDialog';
 import { cn } from '@/lib/utils';
 import { useNavigate } from 'react-router-dom';
 
 export function HomeDashboard() {
     const navigate = useNavigate();
-    const { agents, fetchAgents, deleteAgent } = useAgentsStore();
+    const { agents, fetchAgents, deleteAgent, createAgent, updateAgent, loading } = useAgentsStore();
     const [searchQuery, setSearchQuery] = useState('');
+
+    // Dialog states
+    const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+    const [isManageDialogOpen, setIsManageDialogOpen] = useState(false);
+    const [isAdvancedConfigOpen, setIsAdvancedConfigOpen] = useState(false);
+    const [editingAgent, setEditingAgent] = useState<Agent | null>(null);
+    const [configAgent, setConfigAgent] = useState<Agent | null>(null);
+    const [deletingIds, setDeletingIds] = useState<Set<string>>(new Set());
 
     useEffect(() => {
         fetchAgents();
@@ -141,9 +153,25 @@ export function HomeDashboard() {
                                 onChange={(e) => setSearchQuery(e.target.value)}
                             />
                         </div>
-                        <Button size="sm" className="h-9 gap-1.5" onClick={() => navigate('/shop')}>
+                        <Button
+                            size="sm"
+                            className="h-9 gap-1.5"
+                            onClick={() => {
+                                setEditingAgent(null);
+                                setIsCreateDialogOpen(true);
+                            }}
+                        >
                             <Plus className="h-4 w-4" />
                             <span>新建</span>
+                        </Button>
+                        <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-9 gap-1.5"
+                            onClick={() => setIsManageDialogOpen(true)}
+                        >
+                            <Settings className="h-4 w-4" />
+                            <span>管理</span>
                         </Button>
                     </div>
                 </div>
@@ -159,16 +187,83 @@ export function HomeDashboard() {
                     ))}
 
                     <button
-                        onClick={() => navigate('/shop')}
+                        onClick={() => {
+                            setEditingAgent(null);
+                            setIsCreateDialogOpen(true);
+                        }}
                         className="flex flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed border-muted/30 bg-muted/5 p-6 transition-all hover:bg-muted/10 hover:border-primary/50 group h-[180px]"
                     >
                         <div className="flex h-12 w-12 items-center justify-center rounded-full bg-muted group-hover:bg-primary/10 transition-colors">
                             <Plus className="h-6 w-6 text-muted-foreground group-hover:text-primary transition-colors" />
                         </div>
-                        <span className="text-sm font-medium text-muted-foreground group-hover:text-primary">从商店添加</span>
+                        <span className="text-sm font-medium text-muted-foreground group-hover:text-primary">创建员工</span>
                     </button>
                 </div>
             </div>
+
+            {/* Create/Edit Dialog */}
+            <AgentFormDialog
+                open={isCreateDialogOpen}
+                onOpenChange={setIsCreateDialogOpen}
+                agent={editingAgent}
+                onSave={async (data) => {
+                    if (editingAgent) {
+                        await updateAgent(editingAgent.id, {
+                            name: data.name,
+                            avatar: data.avatar
+                        });
+                    } else {
+                        await createAgent({
+                            agentId: data.agentId!,
+                            displayName: data.name,
+                            emoji: data.emoji,
+                            workspace: undefined
+                        });
+                    }
+                    setIsCreateDialogOpen(false);
+                    setEditingAgent(null);
+                    fetchAgents();
+                }}
+                loading={loading}
+            />
+
+            {/* Manage Dialog */}
+            <AgentManageDialog
+                open={isManageDialogOpen}
+                onOpenChange={setIsManageDialogOpen}
+                agents={agents}
+                loading={loading}
+                onEdit={(agent) => {
+                    setEditingAgent(agent);
+                    setIsManageDialogOpen(false);
+                    setIsCreateDialogOpen(true);
+                }}
+                onDelete={async (agentId) => {
+                    setDeletingIds(prev => new Set(prev).add(agentId));
+                    try {
+                        await deleteAgent(agentId);
+                    } finally {
+                        setDeletingIds(prev => {
+                            const next = new Set(prev);
+                            next.delete(agentId);
+                            return next;
+                        });
+                    }
+                }}
+                onAdvancedConfig={(agent) => {
+                    setConfigAgent(agent);
+                    setIsManageDialogOpen(false);
+                    setIsAdvancedConfigOpen(true);
+                }}
+                deletingIds={deletingIds}
+            />
+
+            {/* Advanced Config Dialog */}
+            <AgentAdvancedConfigDialog
+                open={isAdvancedConfigOpen}
+                onOpenChange={setIsAdvancedConfigOpen}
+                agent={configAgent}
+            />
         </div>
     );
 }
