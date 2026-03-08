@@ -158,6 +158,15 @@ pnpm dev
 > Moonshot（Kimi）说明：ClawX 默认保持开启 Kimi 的 web search。  
 > 当配置 Moonshot 后，ClawX 也会将 OpenClaw 配置中的 Kimi web search 同步到中国区端点（`https://api.moonshot.cn/v1`）。
 
+### 默认端口配置
+
+ClawX 使用以下默认端口：
+
+- **OpenClaw 网关**: `18766`（本地 HTTP/WebSocket 服务器）
+- **Vite 开发服务器**: `5173`（仅开发模式）
+
+如果端口 `18766` 已被其他应用占用，你可以通过 **设置 → 高级 → 网关端口** 进行修改。
+
 ### 代理设置
 
 ClawX 内置了代理设置，适用于需要通过本地代理客户端访问外网的场景，包括 Electron 本身、OpenClaw Gateway，以及 Telegram 这类频道的联网请求。

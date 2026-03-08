@@ -66,7 +66,7 @@ const defaults: AppSettings = {
   
   // Gateway
   gatewayAutoStart: true,
-  gatewayPort: 18789,
+  gatewayPort: 18766,
   gatewayToken: generateToken(),
   proxyEnabled: false,
   proxyServer: '',

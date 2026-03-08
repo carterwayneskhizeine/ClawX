@@ -8,6 +8,8 @@
 
 ### 1. 端口配置
 
+#### 环境变量
+
 **文件**: `.env.example`
 
 **修改前**:
@@ -18,6 +20,138 @@ OPENCLAW_GATEWAY_PORT=18789
 **修改后**:
 ```env
 OPENCLAW_GATEWAY_PORT=18766
+```
+
+#### 前端设置默认端口
+
+**文件**: `src/stores/settings.ts`
+
+**修改前**:
+```typescript
+gatewayPort: 18789,
+```
+
+**修改后**:
+```typescript
+gatewayPort: 18766,
+```
+
+#### Gateway 状态默认端口
+
+**文件**: `src/stores/gateway.ts`
+
+**修改前**:
+```typescript
+status: {
+  state: 'stopped',
+  port: 18789,
+},
+```
+
+**修改后**:
+```typescript
+status: {
+  state: 'stopped',
+  port: 18766,
+},
+```
+
+#### API 客户端回退端口
+
+**文件**: `src/lib/api-client.ts`
+
+**修改前**:
+```typescript
+const port = typeof status?.port === 'number' && status.port > 0 ? status.port : 18789;
+```
+
+**修改后**:
+```typescript
+const port = typeof status?.port === 'number' && status.port > 0 ? status.port : 18766;
+```
+
+#### 持久化存储默认端口
+
+**文件**: `electron/utils/store.ts`
+
+**修改前**:
+```typescript
+gatewayPort: 18789,
+```
+
+**修改后**:
+```typescript
+gatewayPort: 18766,
+```
+
+#### 配置常量
+
+**文件**: `electron/utils/config.ts`
+
+**修改前**:
+```typescript
+/** OpenClaw Gateway port */
+OPENCLAW_GATEWAY: 18789,
+```
+
+**修改后**:
+```typescript
+/** OpenClaw Gateway port */
+OPENCLAW_GATEWAY: 18766,
+```
+
+#### IPC 处理器
+
+**文件**: `electron/main/ipc-handlers.ts` (2处)
+
+**修改前**:
+```typescript
+const port = status.port || 18789;
+```
+
+**修改后**:
+```typescript
+const port = status.port || 18766;
+```
+
+#### Web 请求拦截器
+
+**文件**: `electron/main/index.ts`
+
+**修改前**:
+```typescript
+{ urls: ['http://127.0.0.1:18789/*', 'http://localhost:18789/*'] },
+```
+
+**修改后**:
+```typescript
+{ urls: ['http://127.0.0.1:18766/*', 'http://localhost:18766/*'] },
+```
+
+#### 测试文件
+
+**文件**: `tests/unit/stores.test.ts` (4处)
+
+**修改前**:
+```typescript
+gatewayPort: 18789,
+// ...
+status: { state: 'stopped', port: 18789 },
+// ...
+expect(state.status.port).toBe(18789);
+// ...
+setStatus({ state: 'running', port: 18789, pid: 12345 });
+```
+
+**修改后**:
+```typescript
+gatewayPort: 18766,
+// ...
+status: { state: 'stopped', port: 18766 },
+// ...
+expect(state.status.port).toBe(18766);
+// ...
+setStatus({ state: 'running', port: 18766, pid: 12345 });
 ```
 
 ---

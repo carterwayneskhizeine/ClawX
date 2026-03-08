@@ -155,7 +155,16 @@ When you launch ClawX for the first time, the **Setup Wizard** will guide you th
 4. **Verification** – Test your configuration before entering the main interface
 
 > Note for Moonshot (Kimi): ClawX keeps Kimi web search enabled by default.  
-> When Moonshot is configured, ClawX also syncs Kimi web search to the China endpoint (`https://api.moonshot.cn/v1`) in OpenClaw config.
+> When Moonshot is configured, ClawX also syncs Kimi web search to China endpoint (`https://api.moonshot.cn/v1`) in OpenClaw config. 
+
+### Default Port Configuration
+
+ClawX uses the following default ports:
+
+- **OpenClaw Gateway**: `18766` (local HTTP/WebSocket server)
+- **Vite Dev Server**: `5173` (development mode only)
+
+If port `18766` is already in use by another application, you can change the Gateway port through **Settings → Advanced → Gateway Port**.
 
 ### Proxy Settings
 
