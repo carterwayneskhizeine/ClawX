@@ -5,8 +5,6 @@ import {
     Server,
     ShieldCheck,
     RefreshCw,
-    Settings,
-    ChevronRight,
     CheckCircle2,
     FileText,
     ExternalLink
@@ -24,7 +22,6 @@ export function SysSettings() {
         theme,
         setTheme,
 
-        gatewayPort,
         fileAccessAllowed,
         setFileAccessAllowed
     } = useSettingsStore();
@@ -164,7 +161,7 @@ export function SysSettings() {
                                         <div className="h-8 w-px bg-muted/20" />
                                         <div className="space-y-0.5">
                                             <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">网关端口</div>
-                                            <div className="text-sm font-bold">{gatewayPort}</div>
+                                            <div className="text-sm font-bold">18766</div>
                                         </div>
                                     </div>
                                     <div className="flex items-center gap-2">
@@ -242,8 +239,6 @@ export function SysSettings() {
                                     onCheckedChange={setFileAccessAllowed}
                                 />
                             </div>
-                            <div className="h-px bg-muted/20 mx-2" />
-                            <SecurityButton icon={Settings} label="修改管理密码" />
                         </CardContent>
                     </Card>
 
@@ -316,33 +311,4 @@ function ThemeOption({
     );
 }
 
-function SecurityButton({
-    icon: Icon,
-    label,
-    variant = 'ghost'
-}: {
-    icon: any;
-    label: string;
-    variant?: 'ghost' | 'destructive'
-}) {
-    return (
-        <Button
-            variant={variant === 'destructive' ? 'ghost' : 'outline'}
-            className={cn(
-                "w-full justify-between h-12 rounded-xl text-left font-medium px-4",
-                variant === 'destructive' && "text-destructive hover:bg-destructive/5 border-destructive/10"
-            )}
-        >
-            <div className="flex items-center gap-3">
-                <div className={cn(
-                    "h-8 w-8 rounded-lg flex items-center justify-center bg-muted/50",
-                    variant === 'destructive' && "bg-destructive/10"
-                )}>
-                    <Icon className="h-4 w-4" />
-                </div>
-                <span>{label}</span>
-            </div>
-            <ChevronRight className="h-4 w-4 opacity-30" />
-        </Button>
-    );
-}
+
