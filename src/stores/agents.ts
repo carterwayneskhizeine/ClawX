@@ -30,6 +30,11 @@ interface AgentsState {
     deleteAgent: (agentId: string) => Promise<void>;
 }
 
+// 触发 agent 列表更新事件（供 Sidebar 等组件监听）
+export function dispatchAgentsUpdated() {
+    window.dispatchEvent(new Event('agents-updated'));
+}
+
 export const useAgentsStore = create<AgentsState>((set, get) => ({
     agents: [],
     loading: false,
@@ -37,17 +42,61 @@ export const useAgentsStore = create<AgentsState>((set, get) => ({
     fetchAgents: async () => {
         set({ loading: true });
         try {
+            // Gateway RPC 返回格式是 { success: true, result: { agents: [...] } }
             const res = await invokeIpc<{ agents: any[] }>('gateway:rpc', 'agents.list', {});
-            const mappedAgents: Agent[] = (res?.agents || []).map((agent) => ({
+
+            // 正确的字段路径：res.result.agents
+            let agentsList: any[] = [];
+            if (Array.isArray(res?.result?.agents)) {
+                agentsList = res.result.agents;
+            } else if (Array.isArray(res)) {
+                agentsList = res;
+            } else if (Array.isArray(res?.agents)) {
+                agentsList = res.agents;
+            }
+
+            let mappedAgents: Agent[] = (agentsList).map((agent: any) => ({
                 id: agent.id,
                 name: agent.identity?.name || agent.name || (agent.id === 'main' ? '通用助手' : agent.id),
                 workspace: agent.workspace,
                 identity: agent.identity,
-                status: agent.id === 'main' ? 'idle' : 'offline', // Placeholder status logic
+                status: agent.id === 'main' ? 'idle' : 'offline',
             }));
+
+            // 如果 Gateway 没有返回任何 agent，添加默认的 main agent
+            if (mappedAgents.length === 0) {
+                mappedAgents = [{
+                    id: 'main',
+                    name: '通用助手',
+                    workspace: 'D:\\TheClaw\\.openclaw\\workspace-main',
+                    identity: {
+                        name: '通用助手',
+                        emoji: '🤖',
+                        theme: '',
+                        avatarUrl: '',
+                    },
+                    status: 'idle',
+                }];
+            }
+
             set({ agents: mappedAgents });
         } catch (error) {
             console.error('Failed to fetch agents:', error);
+            // Gateway 连接失败时，也显示默认的 main agent
+            set({
+                agents: [{
+                    id: 'main',
+                    name: '通用助手',
+                    workspace: 'D:\\TheClaw\\.openclaw\\workspace-main',
+                    identity: {
+                        name: '通用助手',
+                        emoji: '🤖',
+                        theme: '',
+                        avatarUrl: '',
+                    },
+                    status: 'offline',
+                }]
+            });
         } finally {
             set({ loading: false });
         }
@@ -91,6 +140,8 @@ export const useAgentsStore = create<AgentsState>((set, get) => ({
             }).catch(err => console.warn('Template copy failed:', err));
 
             await get().fetchAgents();
+            // 触发侧边栏更新事件
+            dispatchAgentsUpdated();
         } finally {
             set({ loading: false });
         }
@@ -116,6 +167,8 @@ export const useAgentsStore = create<AgentsState>((set, get) => ({
             );
 
             await get().fetchAgents();
+            // 触发侧边栏更新事件
+            dispatchAgentsUpdated();
         } finally {
             set({ loading: false });
         }

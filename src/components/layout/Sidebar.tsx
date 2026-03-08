@@ -162,10 +162,23 @@ export function Sidebar() {
     return () => window.clearInterval(timer);
   }, []);
 
+  // 初始加载 + 监听 agent 更新事件
   useEffect(() => {
     if (uiMode === 'new') {
       fetchAgents();
     }
+
+    // 监听 agents-updated 事件，当 agent 被创建/删除时刷新列表
+    const handleAgentsUpdated = () => {
+      if (uiMode === 'new') {
+        fetchAgents();
+      }
+    };
+    window.addEventListener('agents-updated', handleAgentsUpdated);
+
+    return () => {
+      window.removeEventListener('agents-updated', handleAgentsUpdated);
+    };
   }, [uiMode, fetchAgents]);
 
   const sessionBuckets: Array<{ key: SessionBucketKey; label: string; sessions: typeof sessions }> = [
