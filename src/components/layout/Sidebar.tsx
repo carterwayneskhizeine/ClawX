@@ -25,6 +25,7 @@ import {
   LogOut,
   MoreHorizontal,
   Monitor,
+  ChevronDown,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useSettingsStore } from '@/stores/settings';
@@ -129,18 +130,20 @@ export function Sidebar() {
   const deleteSession = useChatStore((s) => s.deleteSession);
 
   const navigate = useNavigate();
-  const isOnChat = useLocation().pathname === '/';
+  const location = useLocation();
+  const isOnChat = location.pathname === '/';
+  const isEmployeePath = location.pathname.startsWith('/employee/');
 
   const getSessionLabel = (key: string, displayName?: string, label?: string) =>
     sessionLabels[key] ?? label ?? displayName ?? key;
 
   const openDevConsole = async () => {
     try {
-      const result = await invokeIpc('gateway:getControlUiUrl') as {
+      const result = await (invokeIpc('gateway:getControlUiUrl') as Promise<{
         success: boolean;
         url?: string;
         error?: string;
-      };
+      }>);
       if (result.success && result.url) {
         window.electron.openExternal(result.url);
       } else {
@@ -154,6 +157,7 @@ export function Sidebar() {
   const { t } = useTranslation(['common', 'chat']);
   const [sessionToDelete, setSessionToDelete] = useState<{ key: string; label: string } | null>(null);
   const [nowMs, setNowMs] = useState(INITIAL_NOW_MS);
+  const [agentsExpanded, setAgentsExpanded] = useState(true);
 
   useEffect(() => {
     const timer = window.setInterval(() => {
@@ -314,55 +318,90 @@ export function Sidebar() {
           </>
         ) : (
           <>
-            <NavItem
-              key={newNavItems[0].to}
-              {...newNavItems[0]}
-              collapsed={sidebarCollapsed}
-            />
-
-            {!sidebarCollapsed && <div className="my-2 border-t border-muted/20" />}
-
-            {/* Digital Employees SubMenu */}
             <div className="flex flex-col gap-1">
-              {!sidebarCollapsed && (
-                <div className="flex items-center gap-2 px-3 py-1 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                  <Users className="h-3 w-3" />
-                  <span>数字员工</span>
-                </div>
-              )}
-              <div className="flex flex-col gap-1 max-h-[40vh] overflow-y-auto pr-1">
-                {agents.map((agent) => (
-                  <NavItem
-                    key={agent.id}
-                    to={`/employee/${agent.id}`}
-                    icon={
-                      <div className="relative">
-                        <span className="text-xl shrink-0 group-hover:scale-110 transition-transform">
-                          {agent.identity?.emoji || '🤖'}
-                        </span>
-                        <div className={cn(
-                          "absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-background",
-                          agent.status === 'idle' ? "bg-green-500" :
-                            agent.status === 'busy' ? "bg-amber-500" : "bg-red-500"
-                        )} />
-                      </div>
-                    }
-                    label={agent.identity?.name || agent.name || agent.id}
-                    collapsed={sidebarCollapsed}
-                  />
-                ))}
-              </div>
-            </div>
-
-            {!sidebarCollapsed && <div className="my-2 border-t border-muted/20" />}
-
-            {newNavItems.slice(1).map((item) => (
               <NavItem
-                key={item.to}
-                {...item}
+                key={newNavItems[0].to}
+                {...newNavItems[0]}
                 collapsed={sidebarCollapsed}
               />
-            ))}
+
+              {!sidebarCollapsed && agentsExpanded && <div className="mt-1 border-t border-muted/20" />}
+
+              {/* Digital Employees SubMenu */}
+              <div className={cn("flex flex-col transition-all duration-300", !sidebarCollapsed && agentsExpanded ? "gap-1 my-2" : "gap-0")}>
+                <button
+                  onClick={() => {
+                    if (sidebarCollapsed) {
+                      setSidebarCollapsed(false);
+                      setAgentsExpanded(true);
+                    } else {
+                      setAgentsExpanded(!agentsExpanded);
+                    }
+                  }}
+                  className={cn(
+                    'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all',
+                    'hover:bg-accent hover:text-accent-foreground',
+                    isEmployeePath
+                      ? 'bg-accent text-accent-foreground'
+                      : 'text-muted-foreground',
+                    sidebarCollapsed && 'justify-center px-2'
+                  )}
+                >
+                  <Users className="h-5 w-5 shrink-0" />
+                  {!sidebarCollapsed && (
+                    <>
+                      <span className="flex-1 text-left">数字员工</span>
+                      <ChevronDown
+                        className={cn(
+                          'h-4 w-4 transition-transform duration-200 text-muted-foreground/50',
+                          !agentsExpanded && '-rotate-90'
+                        )}
+                      />
+                    </>
+                  )}
+                </button>
+
+                {!sidebarCollapsed && agentsExpanded && (
+                  <div className="flex flex-col gap-1 max-h-[40vh] overflow-y-auto pr-1 pl-4 mt-1 animate-in fade-in slide-in-from-top-2 duration-300">
+                    {agents.map((agent) => (
+                      <NavItem
+                        key={agent.id}
+                        to={`/employee/${agent.id}`}
+                        icon={
+                          <div className="relative">
+                            <span className="text-xl shrink-0 group-hover:scale-110 transition-transform">
+                              {agent.identity?.emoji || '🤖'}
+                            </span>
+                            <div
+                              className={cn(
+                                'absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-background',
+                                agent.status === 'idle'
+                                  ? 'bg-green-500'
+                                  : agent.status === 'busy'
+                                    ? 'bg-amber-500'
+                                    : 'bg-red-500'
+                              )}
+                            />
+                          </div>
+                        }
+                        label={agent.identity?.name || agent.name || agent.id}
+                        collapsed={sidebarCollapsed}
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {!sidebarCollapsed && agentsExpanded && <div className="mb-1 border-t border-muted/20" />}
+
+              {newNavItems.slice(1).map((item) => (
+                <NavItem
+                  key={item.to}
+                  {...item}
+                  collapsed={sidebarCollapsed}
+                />
+              ))}
+            </div>
           </>
         )}
       </nav>
