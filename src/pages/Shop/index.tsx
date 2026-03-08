@@ -96,7 +96,7 @@ export function Shop() {
 
 function SkillCard({ skill }: { skill: typeof MOCK_SKILLS[0] }) {
     return (
-        <Card className="rounded-[2rem] border-muted/20 hover:border-primary/30 transition-all duration-300 hover:shadow-xl hover:shadow-primary/5 group cursor-pointer dark:bg-[#1c1c1c]">
+        <Card className="rounded-[2rem] border-muted/20 hover:border-primary/30 transition-all duration-300 hover:shadow-xl hover:shadow-primary/5 group cursor-pointer dark:bg-card">
             <CardContent className="p-8 flex flex-col h-full gap-6">
                 <div className="flex items-start justify-between">
                     <div className="h-16 w-16 rounded-[1.25rem] bg-gradient-to-br from-primary/10 to-primary/5 flex items-center justify-center text-primary group-hover:scale-110 transition-transform duration-300">

@@ -1,22 +1,28 @@
 import { useEffect, useState } from 'react';
 import {
-    Users,
     Plus,
     MoreVertical,
     Trash2,
     Settings2,
-    ChevronRight,
-    PieChart as PieChartIcon,
-    BarChart3,
-    Search,
-    Settings
+    Settings,
+    CloudDownload
 } from 'lucide-react';
+import {
+    BarChart,
+    Bar,
+    XAxis,
+    YAxis,
+    CartesianGrid,
+    Tooltip,
+    ResponsiveContainer,
+    PieChart,
+    Pie,
+    Cell
+} from 'recharts';
 import { useAgentsStore, Agent } from '@/stores/agents';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -28,6 +34,24 @@ import { AgentManageDialog } from '@/components/common/AgentManageDialog';
 import { AgentAdvancedConfigDialog } from '@/components/common/AgentAdvancedConfigDialog';
 import { cn } from '@/lib/utils';
 import { useNavigate } from 'react-router-dom';
+
+const DATA_7_DAYS = [
+    { name: '周一', usage: 1200 },
+    { name: '周二', usage: 1900 },
+    { name: '周三', usage: 800 },
+    { name: '周四', usage: 2400 },
+    { name: '周五', usage: 1600 },
+    { name: '周六', usage: 500 },
+    { name: '周日', usage: 200 },
+];
+
+const MOCK_USER = { points: 8000, totalPoints: 10000 };
+
+const PIE_DATA = [
+    { name: '已使用', value: MOCK_USER.totalPoints - MOCK_USER.points },
+    { name: '剩余', value: MOCK_USER.points },
+];
+const COLORS = ['rgba(255, 255, 255, 0.05)', '#1677ff'];
 
 export function HomeDashboard() {
     const navigate = useNavigate();
@@ -51,133 +75,58 @@ export function HomeDashboard() {
         agent.id.toLowerCase().includes(searchQuery.toLowerCase())
     );
 
-    const statusCounts = {
-        idle: agents.filter(a => a.status === 'idle').length,
-        busy: agents.filter(a => a.status === 'busy').length,
-        offline: agents.filter(a => a.status === 'offline').length,
-    };
-
     return (
-        <div className="flex flex-col gap-8 pb-10 animate-in fade-in slide-in-from-bottom-4 duration-700">
+        <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-10">
             {/* Header Section */}
-            <div className="flex flex-col gap-2">
-                <h1 className="text-3xl font-bold tracking-tight">工作台</h1>
-                <p className="text-muted-foreground">欢迎回来，这是您的数字员工运行概况。</p>
-            </div>
-
-            {/* Analytics Row */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <Card className="col-span-1 border-none bg-gradient-to-br from-primary/5 to-primary/10 shadow-sm transition-all hover:shadow-md">
-                    <CardHeader className="pb-2">
-                        <div className="flex items-center justify-between">
-                            <CardTitle className="text-sm font-medium">状态分布</CardTitle>
-                            <PieChartIcon className="h-4 w-4 text-primary" />
-                        </div>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="flex flex-col gap-4">
-                            <div className="flex items-center justify-between text-2xl font-bold">
-                                <span>{agents.length}</span>
-                                <span className="text-sm font-normal text-muted-foreground">总数</span>
-                            </div>
-                            <div className="flex h-3 w-full overflow-hidden rounded-full bg-muted/30">
-                                <div
-                                    className="bg-green-500 transition-all duration-500"
-                                    style={{ width: `${(statusCounts.idle / agents.length) * 100}%` }}
-                                />
-                                <div
-                                    className="bg-amber-500 transition-all duration-500"
-                                    style={{ width: `${(statusCounts.busy / agents.length) * 100}%` }}
-                                />
-                                <div
-                                    className="bg-slate-400 transition-all duration-500"
-                                    style={{ width: `${(statusCounts.offline / agents.length) * 100}%` }}
-                                />
-                            </div>
-                            <div className="flex justify-between text-[11px] text-muted-foreground">
-                                <div className="flex items-center gap-1.5">
-                                    <div className="h-2 w-2 rounded-full bg-green-500" />
-                                    <span>空闲 {statusCounts.idle}</span>
-                                </div>
-                                <div className="flex items-center gap-1.5">
-                                    <div className="h-2 w-2 rounded-full bg-amber-500" />
-                                    <span>忙碌 {statusCounts.busy}</span>
-                                </div>
-                                <div className="flex items-center gap-1.5">
-                                    <div className="h-2 w-2 rounded-full bg-slate-400" />
-                                    <span>离线 {statusCounts.offline}</span>
-                                </div>
-                            </div>
-                        </div>
-                    </CardContent>
-                </Card>
-
-                <Card className="col-span-2 shadow-sm transition-all hover:shadow-md border-muted/20">
-                    <CardHeader className="pb-2">
-                        <div className="flex items-center justify-between">
-                            <CardTitle className="text-sm font-medium">消息趋势</CardTitle>
-                            <BarChart3 className="h-4 w-4 text-muted-foreground" />
-                        </div>
-                    </CardHeader>
-                    <CardContent className="h-[120px] flex items-end gap-1.5 px-6 pb-4">
-                        {[45, 60, 35, 85, 55, 70, 95].map((val, i) => (
-                            <div key={i} className="group relative flex-1">
-                                <div
-                                    className="w-full bg-primary/20 rounded-t-sm transition-all duration-500 group-hover:bg-primary/40"
-                                    style={{ height: `${val}%` }}
-                                />
-                                <div className="absolute -top-6 left-1/2 -translate-x-1/2 scale-0 group-hover:scale-100 transition-transform bg-popover border px-1.5 py-0.5 rounded text-[10px] shadow-sm z-10 whitespace-nowrap">
-                                    {Math.round(val * 1.5)} 消息
-                                </div>
-                            </div>
-                        ))}
-                    </CardContent>
-                </Card>
-            </div>
+            <header className="flex justify-between items-start">
+                <div>
+                    <h2 className="text-3xl font-bold tracking-tight mb-1">控制面板</h2>
+                    <p className="text-muted-foreground text-sm">欢迎您，这是您的数字员工概览</p>
+                </div>
+                <Button
+                    className="rounded-xl shadow-sm bg-green-500 hover:bg-green-600 dark:bg-green-500 dark:hover:bg-green-400 dark:text-white border-none flex items-center justify-center gap-2 px-4"
+                >
+                    <CloudDownload className="h-4 w-4" />
+                    <span>发现新版本</span>
+                </Button>
+            </header>
 
             {/* Agents Section */}
-            <div className="flex flex-col gap-6">
-                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                    <div className="flex items-center gap-3">
-                        <Users className="h-5 w-5 text-primary" />
-                        <h2 className="text-xl font-semibold">数字员工</h2>
-                        <Badge variant="secondary" className="font-mono">{agents.length}</Badge>
-                    </div>
-                    <div className="flex items-center gap-3 w-full sm:w-auto">
-                        <div className="relative w-full sm:w-64">
-                            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                            <Input
-                                placeholder="搜索员工..."
-                                className="pl-9 bg-background/50 h-9"
-                                value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
-                            />
-                        </div>
+            <section>
+                <div className="flex items-center justify-between mb-4">
+                    <h4 className="text-lg font-semibold m-0">数字员工状态 ({agents.length})</h4>
+                    <div className="flex gap-2">
                         <Button
-                            size="sm"
-                            className="h-9 gap-1.5"
+                            className="rounded-xl shadow-sm bg-blue-600 hover:bg-blue-500 text-white border-none flex items-center justify-center gap-2"
                             onClick={() => {
                                 setEditingAgent(null);
                                 setIsCreateDialogOpen(true);
                             }}
                         >
                             <Plus className="h-4 w-4" />
-                            <span>新建</span>
+                            <span>创建员工</span>
                         </Button>
                         <Button
-                            size="sm"
                             variant="outline"
-                            className="h-9 gap-1.5"
+                            className="rounded-xl shadow-sm flex items-center justify-center gap-2"
                             onClick={() => setIsManageDialogOpen(true)}
                         >
                             <Settings className="h-4 w-4" />
-                            <span>管理</span>
+                            <span>进入管理</span>
                         </Button>
                     </div>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                    {filteredAgents.map((agent) => (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
+                    {loading && agents.length === 0 ? (
+                        <div className="col-span-full py-12 flex justify-center text-muted-foreground">
+                            加载代理列表中...
+                        </div>
+                    ) : agents.length === 0 ? (
+                        <div className="col-span-full py-12 text-center text-slate-400">
+                            未发现活跃的数字员工
+                        </div>
+                    ) : filteredAgents.map((agent) => (
                         <AgentCard
                             key={agent.id}
                             agent={agent}
@@ -185,21 +134,85 @@ export function HomeDashboard() {
                             onClick={() => navigate(`/employee/${agent.id}`)}
                         />
                     ))}
-
-                    <button
-                        onClick={() => {
-                            setEditingAgent(null);
-                            setIsCreateDialogOpen(true);
-                        }}
-                        className="flex flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed border-muted/30 bg-muted/5 p-6 transition-all hover:bg-muted/10 hover:border-primary/50 group h-[180px]"
-                    >
-                        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-muted group-hover:bg-primary/10 transition-colors">
-                            <Plus className="h-6 w-6 text-muted-foreground group-hover:text-primary transition-colors" />
-                        </div>
-                        <span className="text-sm font-medium text-muted-foreground group-hover:text-primary">创建员工</span>
-                    </button>
                 </div>
-            </div>
+            </section>
+
+            {/* Analytics Dashboard */}
+            <section className="pb-12">
+                <h4 className="text-lg font-semibold mb-4 mx-0">算力统计仪表盘</h4>
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    {/* Pie Chart / Points Info */}
+                    <Card className="rounded-3xl border-slate-100 dark:border-white/5 bg-card h-full shadow-sm">
+                        <CardContent className="p-6">
+                            <span className="uppercase tracking-wider font-semibold text-xs block mb-4 text-muted-foreground dark:text-slate-500">算力积分配额</span>
+                            <div className="flex flex-col md:flex-row items-center justify-around h-[300px]">
+                                <div className="w-full max-w-[200px] h-[200px]">
+                                    <ResponsiveContainer width="100%" height="100%">
+                                        <PieChart>
+                                            <Pie
+                                                data={PIE_DATA}
+                                                cx="50%"
+                                                cy="50%"
+                                                innerRadius={60}
+                                                outerRadius={80}
+                                                paddingAngle={5}
+                                                dataKey="value"
+                                            >
+                                                {PIE_DATA.map((entry, index) => (
+                                                    <Cell key={`cell-${index}`} fill={index === 0 ? 'rgba(226, 232, 240, 1)' : COLORS[1]} className="dark:fill-[rgba(255,255,255,0.05)]" />
+                                                ))}
+                                            </Pie>
+                                            <Tooltip
+                                                contentStyle={{ backgroundColor: 'hsl(var(--background))', borderRadius: '12px', border: '1px solid hsl(var(--border))', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)' }}
+                                                itemStyle={{ color: 'hsl(var(--foreground))' }}
+                                                formatter={(value: number) => [value.toLocaleString(), '积分']}
+                                            />
+                                        </PieChart>
+                                    </ResponsiveContainer>
+                                </div>
+                                <div className="space-y-4 text-center md:text-left">
+                                    <div>
+                                        <span className="text-xs text-muted-foreground dark:text-slate-500 block">当前可用积分</span>
+                                        <div className="text-3xl font-black text-blue-600 dark:text-blue-500 drop-shadow-[0_0_10px_rgba(22,119,255,0.3)]">{MOCK_USER.points.toLocaleString()}</div>
+                                    </div>
+                                    <div>
+                                        <span className="text-xs text-muted-foreground dark:text-slate-500 block">今日消耗积分</span>
+                                        <div className="text-xl font-bold text-slate-700 dark:text-slate-200">1,240</div>
+                                    </div>
+                                    <div className="pt-2">
+                                        <Button size="lg" className="rounded-xl font-bold shadow-lg shadow-blue-100 dark:shadow-none bg-blue-600 hover:bg-blue-700 text-white">
+                                            立即充值
+                                        </Button>
+                                    </div>
+                                </div>
+                            </div>
+                        </CardContent>
+                    </Card>
+
+                    {/* Bar Chart / Usage Trend */}
+                    <Card className="rounded-3xl border-slate-100 dark:border-white/5 bg-card h-full shadow-sm">
+                        <CardContent className="p-6">
+                            <span className="uppercase tracking-wider font-semibold text-xs block mb-4 text-muted-foreground dark:text-slate-500">近7天使用趋势</span>
+                            <div className="h-[300px] w-full">
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <BarChart data={DATA_7_DAYS}>
+                                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="currentColor" className="opacity-10 dark:opacity-5" />
+                                        <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 12 }} />
+                                        <YAxis axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 12 }} />
+                                        <Tooltip
+                                            cursor={{ fill: 'currentColor', opacity: 0.05 }}
+                                            contentStyle={{ backgroundColor: 'hsl(var(--background))', borderRadius: '12px', border: '1px solid hsl(var(--border))', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)' }}
+                                            itemStyle={{ color: 'hsl(var(--foreground))' }}
+                                            formatter={(value: number) => [value.toLocaleString(), '使用量']}
+                                        />
+                                        <Bar dataKey="usage" fill="#1677ff" radius={[6, 6, 0, 0]} />
+                                    </BarChart>
+                                </ResponsiveContainer>
+                            </div>
+                        </CardContent>
+                    </Card>
+                </div>
+            </section>
 
             {/* Create/Edit Dialog */}
             <AgentFormDialog
@@ -271,61 +284,51 @@ export function HomeDashboard() {
 function AgentCard({ agent, onDelete, onClick }: { agent: Agent; onDelete: () => void; onClick: () => void }) {
     return (
         <Card
-            className="group relative overflow-hidden transition-all duration-300 hover:shadow-lg hover:-translate-y-1 border-muted/20 bg-card/50 backdrop-blur-sm cursor-pointer"
+            className="group relative overflow-hidden transition-all duration-300 hover:shadow-lg hover:-translate-y-1 border-slate-100 dark:border-white/5 bg-card/50 backdrop-blur-sm cursor-pointer rounded-2xl min-h-[200px] flex flex-col justify-center"
             onClick={onClick}
         >
-            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-primary/20 via-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-
-            <CardHeader className="flex flex-row items-start justify-between p-5 pb-2">
-                <Avatar className="h-12 w-12 rounded-xl ring-2 ring-background group-hover:scale-110 transition-transform">
-                    <AvatarImage src={agent.identity?.avatarUrl} />
-                    <AvatarFallback className="text-2xl rounded-xl bg-primary/10">
-                        {agent.identity?.emoji || '🤖'}
-                    </AvatarFallback>
-                </Avatar>
-                <DropdownMenu>
-                    <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                        <Button variant="ghost" size="icon" className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity rounded-full">
-                            <MoreVertical className="h-4 w-4" />
-                        </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                        <DropdownMenuItem className="gap-2">
-                            <Settings2 className="h-4 w-4" />
-                            <span>设置</span>
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                            className="text-destructive focus:text-destructive gap-2"
-                            onClick={(e) => { e.stopPropagation(); onDelete(); }}
-                        >
-                            <Trash2 className="h-4 w-4" />
-                            <span>删除</span>
-                        </DropdownMenuItem>
-                    </DropdownMenuContent>
-                </DropdownMenu>
-            </CardHeader>
-
-            <CardContent className="p-5 pt-2">
-                <div className="flex flex-col gap-1">
-                    <h3 className="font-bold truncate text-lg">{agent.name}</h3>
-                    <p className="text-xs text-muted-foreground line-clamp-1 h-4">
-                        {agent.workspace || agent.id}
-                    </p>
+            <CardContent className="p-4 pt-4 flex flex-col items-center justify-center h-full">
+                <div className="relative inline-block mb-3">
+                    <Avatar className="h-16 w-16 rounded-2xl ring-1 ring-slate-100 dark:ring-white/10 group-hover:scale-110 transition-transform">
+                        <AvatarImage src={agent.identity?.avatarUrl} />
+                        <AvatarFallback className="text-2xl rounded-2xl bg-primary/10">
+                            {agent.identity?.emoji || '🤖'}
+                        </AvatarFallback>
+                    </Avatar>
                 </div>
 
-                <div className="mt-4 flex items-center justify-between">
-                    <div className="flex items-center gap-1.5">
-                        <div className={cn(
-                            "h-2 w-2 rounded-full",
-                            agent.status === 'idle' ? "bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.4)]" :
-                                agent.status === 'busy' ? "bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.4)]" :
-                                    "bg-slate-400"
-                        )} />
-                        <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                            {agent.status === 'idle' ? 'Running' : agent.status === 'busy' ? 'Working' : 'Offline'}
-                        </span>
-                    </div>
-                    <ChevronRight className="h-4 w-4 text-muted-foreground/30 group-hover:text-primary group-hover:translate-x-1 transition-all" />
+                <h5 className="font-semibold truncate text-sm mb-1 dark:text-slate-100 w-full text-center">{agent.name}</h5>
+
+                <p className={cn(
+                    "text-xs line-clamp-2 w-full leading-relaxed overflow-hidden text-ellipsis text-center",
+                    agent.status === 'idle' ? "text-green-500 dark:text-green-400" :
+                        agent.status === 'busy' ? "text-[#F4B400] dark:text-amber-400" :
+                            "text-red-500 dark:text-red-400"
+                )}>
+                    {agent.status === 'idle' ? '在线' : agent.status === 'busy' ? '忙碌' : '离线'}
+                </p>
+
+                <div className="absolute top-2 right-2">
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                            <Button variant="ghost" size="icon" className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity rounded-full">
+                                <MoreVertical className="h-4 w-4" />
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                            <DropdownMenuItem className="gap-2">
+                                <Settings2 className="h-4 w-4" />
+                                <span>设置</span>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                                className="text-destructive focus:text-destructive gap-2"
+                                onClick={(e) => { e.stopPropagation(); onDelete(); }}
+                            >
+                                <Trash2 className="h-4 w-4" />
+                                <span>删除</span>
+                            </DropdownMenuItem>
+                        </DropdownMenuContent>
+                    </DropdownMenu>
                 </div>
             </CardContent>
         </Card>

@@ -43,7 +43,7 @@ export function Profile() {
             </div>
 
             {/* Main Card */}
-            <Card className="rounded-[2.5rem] border-muted/20 dark:bg-[#1c1c1c] overflow-hidden shadow-sm">
+            <Card className="rounded-[2.5rem] border-muted/20 dark:bg-card overflow-hidden shadow-sm">
                 {/* Cover Area */}
                 <div className="h-40 bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-600 dark:from-blue-900/40 dark:via-indigo-900/40 dark:to-purple-900/40 border-b border-white/10" />
 

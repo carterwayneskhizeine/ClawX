@@ -105,7 +105,7 @@ function CourseCard({ course }: { course: typeof MOCK_COURSES[0] }) {
     };
 
     return (
-        <Card className="h-full rounded-[2rem] border-muted/20 dark:bg-[#1c1c1c] overflow-hidden group transition-all duration-300 hover:shadow-xl cursor-pointer">
+        <Card className="h-full rounded-[2rem] border-muted/20 dark:bg-card overflow-hidden group transition-all duration-300 hover:shadow-xl cursor-pointer">
             <CardContent className="p-0 flex flex-col h-full">
                 {/* Thumbnail Area */}
                 <div className="relative aspect-video overflow-hidden">

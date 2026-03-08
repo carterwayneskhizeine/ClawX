@@ -24,6 +24,7 @@ import {
   User,
   LogOut,
   MoreHorizontal,
+  Monitor,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useSettingsStore } from '@/stores/settings';
@@ -212,6 +213,17 @@ export function Sidebar() {
     >
       {/* Navigation */}
       <nav className="flex-1 overflow-hidden flex flex-col p-2 gap-1">
+        <div className="flex items-center gap-2 px-3 py-4 mb-2">
+          <div className="flex shrink-0 items-center justify-center text-blue-600">
+            <Monitor className="h-6 w-6" />
+          </div>
+          {!sidebarCollapsed && (
+            <span className="font-bold text-sm text-foreground tracking-wide whitespace-nowrap">
+              OPC数字员工智能助手
+            </span>
+          )}
+        </div>
+
         {uiMode === 'classic' ? (
           <>
             {/* Chat nav item: acts as "New Chat" button, never highlighted as active */}

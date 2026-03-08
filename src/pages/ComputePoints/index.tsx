@@ -64,7 +64,7 @@ export function ComputePoints() {
                 </Card>
 
                 {/* Right: Trend Chart */}
-                <Card className="lg:col-span-2 rounded-[2rem] border-muted/20 dark:bg-[#1c1c1c] shadow-sm p-6 flex flex-col">
+                <Card className="lg:col-span-2 rounded-[2rem] border-muted/20 bg-card shadow-sm p-6 flex flex-col">
                     <div className="flex items-center justify-between mb-8">
                         <div className="flex items-center gap-2">
                             <CardTitle className="text-base font-bold">算力积分消耗趋势（近30天）</CardTitle>
@@ -94,7 +94,7 @@ export function ComputePoints() {
             </div>
 
             {/* History Card */}
-            <Card className="rounded-[2rem] border-muted/20 dark:bg-[#1c1c1c] shadow-sm overflow-hidden min-h-[400px]">
+            <Card className="rounded-[2rem] border-muted/20 bg-card shadow-sm overflow-hidden min-h-[400px]">
                 <header className="px-8 py-6 border-b border-muted/10 bg-muted/5 flex items-center gap-3">
                     <History className="h-5 w-5 text-primary" />
                     <h2 className="font-bold">算力积分消耗记录</h2>

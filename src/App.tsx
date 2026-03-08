@@ -262,10 +262,7 @@ function App() {
           )}
         </Routes>
 
-        {/* Mode Indicator */}
-        <div className="fixed bottom-2 left-1/2 -translate-x-1/2 z-[99999] px-3 py-1 rounded-full bg-black/60 text-white text-[11px] pointer-events-none opacity-40 select-none">
-          Ctrl+P 切换 UI · 当前: {uiMode === 'new' ? '新版' : '经典'}
-        </div>
+
 
         {/* Global toast notifications */}
         <Toaster

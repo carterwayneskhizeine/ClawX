@@ -7,11 +7,8 @@ import {
     Save,
     RotateCcw,
     RefreshCw,
-    Globe,
     Settings,
     ChevronRight,
-    LogOut,
-    Terminal,
     CheckCircle2
 } from 'lucide-react';
 import { useSettingsStore } from '@/stores/settings';
@@ -20,16 +17,13 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
-import { Select } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
 
 export function SysSettings() {
     const {
         theme,
         setTheme,
-        language,
-        setLanguage,
-        setUiMode,
+
         gatewayPort,
         setGatewayPort
     } = useSettingsStore();
@@ -55,7 +49,7 @@ export function SysSettings() {
                 {/* Left Column: Appearance + Notifications */}
                 <div className="xl:col-span-2 flex flex-col gap-8">
                     {/* Appearance Card */}
-                    <Card className="rounded-[2rem] border-muted/20 dark:bg-[#1c1c1c] overflow-hidden">
+                    <Card className="rounded-[2rem] border-muted/20 dark:bg-card overflow-hidden">
                         <CardHeader className="border-b border-muted/10 bg-muted/5 p-6">
                             <div className="flex items-center gap-2">
                                 <Palette className="h-5 w-5 text-primary" />
@@ -88,32 +82,12 @@ export function SysSettings() {
                                 />
                             </div>
 
-                            <div className="h-px bg-muted/20" />
 
-                            {/* Language Settings */}
-                            <div className="flex items-center justify-between">
-                                <div className="space-y-1">
-                                    <div className="flex items-center gap-2">
-                                        <Globe className="h-4 w-4 text-muted-foreground" />
-                                        <span className="font-bold">全局语言</span>
-                                    </div>
-                                    <p className="text-xs text-muted-foreground">系统界面显示的语言</p>
-                                </div>
-                                <Select
-                                    value={language}
-                                    onChange={(e: any) => setLanguage(e.target.value)}
-                                    className="w-40 rounded-xl h-10 border-muted/30"
-                                >
-                                    <option value="zh">简体中文 (Chinese)</option>
-                                    <option value="en">English (US)</option>
-                                    <option value="ja">日本語 (Japanese)</option>
-                                </Select>
-                            </div>
                         </CardContent>
                     </Card>
 
                     {/* Notifications Card */}
-                    <Card className="rounded-[2rem] border-muted/20 dark:bg-[#1c1c1c] overflow-hidden">
+                    <Card className="rounded-[2rem] border-muted/20 dark:bg-card overflow-hidden">
                         <CardHeader className="border-b border-muted/10 bg-muted/5 p-6">
                             <div className="flex items-center gap-2">
                                 <Bell className="h-5 w-5 text-primary" />
@@ -143,7 +117,7 @@ export function SysSettings() {
                 {/* Right Column: Gateway + Security + Actions */}
                 <div className="flex flex-col gap-8">
                     {/* Gateway Card */}
-                    <Card className="rounded-[2rem] border-muted/20 dark:bg-[#1c1c1c] overflow-hidden">
+                    <Card className="rounded-[2rem] border-muted/20 dark:bg-card overflow-hidden">
                         <CardHeader className="border-b border-muted/10 bg-muted/5 p-6">
                             <div className="flex items-center gap-2">
                                 <Server className="h-5 w-5 text-primary" />
@@ -191,7 +165,7 @@ export function SysSettings() {
                     </Card>
 
                     {/* Security Card */}
-                    <Card className="rounded-[2rem] border-muted/20 dark:bg-[#1c1c1c] overflow-hidden">
+                    <Card className="rounded-[2rem] border-muted/20 dark:bg-card overflow-hidden">
                         <CardHeader className="border-b border-muted/10 bg-muted/5 p-6">
                             <div className="flex items-center gap-2">
                                 <ShieldCheck className="h-5 w-5 text-primary" />
@@ -200,26 +174,10 @@ export function SysSettings() {
                         </CardHeader>
                         <CardContent className="p-4 space-y-2">
                             <SecurityButton icon={Settings} label="修改管理密码" />
-                            <SecurityButton icon={ShieldCheck} label="API 私钥管理" />
-                            <SecurityButton icon={LogOut} label="退出并清除缓存" variant="destructive" />
                         </CardContent>
                     </Card>
 
-                    {/* Hidden UI Toggle */}
-                    <div className="p-4 rounded-2xl border border-orange-500/20 bg-orange-500/5 dark:bg-orange-950/10 border-dashed flex flex-col gap-3">
-                        <div className="flex flex-col gap-1">
-                            <span className="text-xs font-bold text-orange-600 dark:text-orange-400">试验性功能</span>
-                            <p className="text-[10px] text-muted-foreground">切换回经典 UI 模式（后台控制台），或按 <kbd className="font-mono bg-muted px-1 rounded">Ctrl+P</kbd></p>
-                        </div>
-                        <Button
-                            size="sm"
-                            className="bg-orange-600 hover:bg-orange-700 text-white font-bold rounded-lg h-9 gap-2"
-                            onClick={() => setUiMode('classic')}
-                        >
-                            <Terminal className="h-4 w-4" />
-                            切换到经典 UI
-                        </Button>
-                    </div>
+
 
                     {/* Global Actions */}
                     <div className="flex items-center justify-end gap-3 mt-auto">
