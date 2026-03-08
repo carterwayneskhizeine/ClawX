@@ -24,9 +24,9 @@ const NODE_MODULES = path.join(ROOT, 'node_modules');
 
 // On Windows, pnpm virtual store paths can exceed MAX_PATH (260 chars).
 function normWin(p) {
-  if (process.platform !== 'win32') return p;
-  if (p.startsWith('\\\\?\\')) return p;
-  return '\\\\?\\' + p.replace(/\//g, '\\');
+  // Node.js 18.17+ natively supports long paths on Windows via LongPathsEnabled.
+  // The \\?\ prefix breaks fs.realpathSync (EISDIR error), so we just return the path as-is.
+  return p;
 }
 
 echo`📦 Bundling openclaw for electron-builder...`;
