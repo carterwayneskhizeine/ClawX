@@ -408,19 +408,29 @@ export function Sidebar() {
 
       {/* Footer */}
       <div className="p-2 space-y-1">
-        {uiMode === 'new' && !sidebarCollapsed && (
+        {uiMode === 'new' && (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <button className="flex w-full items-center gap-3 rounded-lg p-2 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground">
-                <Avatar className="h-8 w-8 rounded-lg overflow-hidden border border-muted-foreground/10 bg-muted">
+              <button className={cn(
+                "flex w-full items-center gap-3 rounded-lg transition-colors hover:bg-accent hover:text-accent-foreground",
+                sidebarCollapsed ? "justify-center p-1" : "p-2"
+              )}>
+                <Avatar className={cn(
+                  "rounded-lg overflow-hidden border border-muted-foreground/10 bg-muted",
+                  sidebarCollapsed ? "h-10 w-10" : "h-8 w-8"
+                )}>
                   <AvatarImage src="https://picsum.photos/seed/user123/200" alt="User" />
                   <AvatarFallback className="rounded-lg"><User className="h-4 w-4" /></AvatarFallback>
                 </Avatar>
-                <div className="flex flex-col items-start min-w-0">
-                  <span className="truncate w-full font-semibold">User Admin</span>
-                  <span className="truncate w-full text-[10px] text-muted-foreground">Premium Account</span>
-                </div>
-                <MoreHorizontal className="ml-auto h-4 w-4 text-muted-foreground" />
+                {!sidebarCollapsed && (
+                  <>
+                    <div className="flex flex-col items-start min-w-0">
+                      <span className="truncate w-full font-semibold">User Admin</span>
+                      <span className="truncate w-full text-[10px] text-muted-foreground">Premium Account</span>
+                    </div>
+                    <MoreHorizontal className="ml-auto h-4 w-4 text-muted-foreground" />
+                  </>
+                )}
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-56" side="right">
