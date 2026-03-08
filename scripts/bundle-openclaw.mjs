@@ -38,7 +38,7 @@ if (!fs.existsSync(openclawLink)) {
   process.exit(1);
 }
 
-const openclawReal = fs.realpathSync(normWin(openclawLink));
+const openclawReal = fs.realpathSync(openclawLink);
 echo`   openclaw resolved: ${openclawReal}`;
 
 // 2. Clean and create output directory
