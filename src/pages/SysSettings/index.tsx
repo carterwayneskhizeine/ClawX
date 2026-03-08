@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import {
     Palette,
     Bell,
@@ -6,12 +7,14 @@ import {
     RefreshCw,
     Settings,
     ChevronRight,
-    CheckCircle2
+    CheckCircle2,
+    FileText,
+    ExternalLink
 } from 'lucide-react';
 import { useSettingsStore } from '@/stores/settings';
 import { useGatewayStore } from '@/stores/gateway';
+import { invokeIpc } from '@/lib/api-client';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
 import { cn } from '@/lib/utils';
@@ -22,13 +25,35 @@ export function SysSettings() {
         setTheme,
 
         gatewayPort,
-        setGatewayPort,
         fileAccessAllowed,
         setFileAccessAllowed
     } = useSettingsStore();
 
     const gatewayStatus = useGatewayStore((s) => s.status);
     const restartGateway = useGatewayStore((s) => s.restart);
+
+    const [showLogs, setShowLogs] = useState(false);
+    const [logContent, setLogContent] = useState('');
+
+    const handleShowLogs = async () => {
+        try {
+            const logs = await invokeIpc<string>('log:readFile', 100);
+            setLogContent(logs);
+            setShowLogs(true);
+        } catch {
+            setLogContent('(Failed to load logs)');
+            setShowLogs(true);
+        }
+    };
+
+    const handleOpenLogDir = async () => {
+        try {
+            const logDir = await invokeIpc<string>('log:getDir');
+            if (logDir) {
+                await invokeIpc('shell:showItemInFolder', logDir);
+            }
+        } catch { /* ignore */ }
+    };
 
 
 
@@ -122,42 +147,79 @@ export function SysSettings() {
                             </div>
                         </CardHeader>
                         <CardContent className="p-6 space-y-6">
-                            {/* Connection Status */}
-                            <div className="p-4 bg-muted/30 rounded-2xl border border-muted/20 flex items-center justify-between">
-                                <div className="flex items-center gap-2 text-sm font-medium">
-                                    <div className={cn(
-                                        "h-2 w-2 rounded-full",
-                                        gatewayStatus.state === 'running' ? "bg-green-500 animate-pulse shadow-[0_0_8px_rgba(34,197,94,0.4)]" : "bg-red-500"
-                                    )} />
-                                    {gatewayStatus.state === 'running' ? '已连接到网关' : '网关未连接'}
+                            {/* Gateway Stats Row */}
+                            <div className="flex flex-col gap-4">
+                                <div className="p-4 bg-muted/30 rounded-2xl border border-muted/10 flex items-center justify-between">
+                                    <div className="flex items-center gap-4">
+                                        <div className="space-y-0.5">
+                                            <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">网关状态</div>
+                                            <div className="flex items-center gap-2">
+                                                <div className={cn(
+                                                    "h-2 w-2 rounded-full",
+                                                    gatewayStatus.state === 'running' ? "bg-green-500 animate-pulse shadow-[0_0_8px_rgba(34,197,94,0.4)]" : "bg-red-500"
+                                                )} />
+                                                <span className="text-sm font-bold capitalize">{gatewayStatus.state}</span>
+                                            </div>
+                                        </div>
+                                        <div className="h-8 w-px bg-muted/20" />
+                                        <div className="space-y-0.5">
+                                            <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">网关端口</div>
+                                            <div className="text-sm font-bold">{gatewayPort}</div>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            className="h-9 px-3 rounded-xl gap-2 hover:bg-primary/10 hover:text-primary transition-colors"
+                                            onClick={() => restartGateway()}
+                                        >
+                                            <RefreshCw className="h-4 w-4" />
+                                            <span className="text-xs font-bold">重启</span>
+                                        </Button>
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            className="h-9 px-3 rounded-xl gap-2 hover:bg-primary/10 hover:text-primary transition-colors"
+                                            onClick={handleShowLogs}
+                                        >
+                                            <FileText className="h-4 w-4" />
+                                            <span className="text-xs font-bold">日志</span>
+                                        </Button>
+                                    </div>
                                 </div>
-                                <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full hover:rotate-180 transition-transform duration-500" onClick={() => restartGateway()}>
-                                    <RefreshCw className="h-3.5 w-3.5" />
-                                </Button>
+
+                                {showLogs && (
+                                    <div className="space-y-3 animate-in fade-in slide-in-from-top-2 duration-300">
+                                        <div className="flex items-center justify-between px-1">
+                                            <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">最近运行日志</span>
+                                            <div className="flex items-center gap-2">
+                                                <Button variant="ghost" size="sm" className="h-6 text-[10px] rounded-lg" onClick={handleOpenLogDir}>
+                                                    <ExternalLink className="h-3 w-3 mr-1" />
+                                                    打开目录
+                                                </Button>
+                                                <Button variant="ghost" size="sm" className="h-6 text-[10px] rounded-lg" onClick={() => setShowLogs(false)}>
+                                                    关闭
+                                                </Button>
+                                            </div>
+                                        </div>
+                                        <pre className="text-[11px] text-muted-foreground bg-muted/20 p-4 rounded-2xl max-h-48 overflow-auto whitespace-pre-wrap font-mono border border-muted/10">
+                                            {logContent || '暂无日志内容'}
+                                        </pre>
+                                    </div>
+                                )}
                             </div>
 
                             {/* Config Fields */}
-                            <div className="space-y-4">
-                                <div className="space-y-2">
-                                    <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest px-1">Gateway Port</label>
-                                    <Input
-                                        type="number"
-                                        value={gatewayPort}
-                                        onChange={(e) => setGatewayPort(Number(e.target.value))}
-                                        className="rounded-xl h-11 border-muted/30 focus:ring-primary/20 bg-background/50"
-                                        placeholder="18766"
-                                    />
+                            <div className="space-y-4 pt-2">
+                                <div className="flex items-center justify-between px-1">
+                                    <div className="space-y-0.5">
+                                        <div className="text-sm font-bold">启动时自动连接</div>
+                                        <p className="text-[11px] text-muted-foreground">应用开启后自动启动并连接网关</p>
+                                    </div>
+                                    <Switch defaultChecked />
                                 </div>
                             </div>
-
-                            <div className="flex items-center justify-between px-1">
-                                <span className="text-sm font-medium text-[12px]">启动时自动连接</span>
-                                <Switch defaultChecked />
-                            </div>
-
-                            <Button className="w-full h-11 rounded-xl font-bold bg-primary hover:bg-primary/90 shadow-lg shadow-primary/10" onClick={() => restartGateway()}>
-                                重新连接网关
-                            </Button>
                         </CardContent>
                     </Card>
 
@@ -210,27 +272,36 @@ function ThemeOption({
     return (
         <div
             className={cn(
-                "p-4 rounded-2xl border-2 cursor-pointer transition-all flex flex-col gap-3",
+                "group p-4 rounded-2xl border-2 cursor-pointer transition-all duration-300 flex flex-col gap-3",
                 active
-                    ? "border-primary bg-primary/5 dark:bg-primary/10"
-                    : "border-muted/30 hover:border-muted-foreground/30 bg-background/50"
+                    ? "border-primary bg-primary/5 dark:bg-primary/10 ring-4 ring-primary/10 shadow-lg shadow-primary/5"
+                    : "border-muted/30 hover:border-primary/40 hover:bg-muted/10 bg-background/50 shadow-sm"
             )}
             onClick={onClick}
         >
             <div className={cn(
-                "h-24 w-full rounded-xl overflow-hidden border border-muted/20 relative",
-                mode === 'light' ? "bg-white" : mode === 'dark' ? "bg-slate-950" : "bg-gradient-to-br from-white via-slate-500 to-slate-950"
+                "h-24 w-full rounded-xl overflow-hidden border border-muted/20 relative transition-transform duration-300 group-hover:scale-[1.02]",
+                mode === 'light' ? "bg-slate-50" : mode === 'dark' ? "bg-black" : "bg-gradient-to-br from-slate-50 via-slate-400 to-black"
             )}>
-                {/* Mock UI stripes */}
-                <div className="absolute inset-0 p-3 flex gap-2">
-                    <div className="w-1/3 border-r border-muted/20 space-y-2 pr-2">
-                        <div className="h-1.5 w-full bg-muted/40 rounded-full" />
-                        <div className="h-1.5 w-2/3 bg-muted/40 rounded-full" />
+                {/* Mock UI Structure */}
+                <div className="absolute inset-0 flex">
+                    {/* Mock Sidebar */}
+                    <div className={cn(
+                        "w-1/3 border-r h-full p-2 space-y-2",
+                        mode === 'light' ? "bg-white border-slate-200" : mode === 'dark' ? "bg-[#0a0a0a] border-white/5" : "bg-slate-200/50 border-white/10"
+                    )}>
+                        <div className={cn("h-2 w-full rounded-sm", mode === 'light' ? "bg-slate-100" : "bg-white/5")} />
+                        <div className={cn("h-2 w-3/4 rounded-sm", mode === 'light' ? "bg-slate-100" : "bg-white/5")} />
+                        <div className={cn("h-2 w-1/2 rounded-sm", mode === 'light' ? "bg-slate-100" : "bg-white/5")} />
                     </div>
-                    <div className="flex-1 space-y-2">
-                        <div className="h-1.5 w-full bg-muted/20 rounded-full" />
-                        <div className="h-1.5 w-full bg-muted/20 rounded-full" />
-                        <div className="h-1.5 w-3/4 bg-muted/20 rounded-full" />
+                    {/* Mock Content */}
+                    <div className="flex-1 p-3 space-y-2">
+                        <div className={cn("h-3 w-full rounded-sm mb-1", mode === 'light' ? "bg-primary/20" : "bg-primary/30")} />
+                        <div className={cn("grid grid-cols-2 gap-2")}>
+                            <div className={cn("h-8 rounded-md", mode === 'light' ? "bg-white shadow-sm border border-slate-200" : "bg-white/5 border border-white/10")} />
+                            <div className={cn("h-8 rounded-md", mode === 'light' ? "bg-white shadow-sm border border-slate-200" : "bg-white/5 border border-white/10")} />
+                        </div>
+                        <div className={cn("h-2 w-2/3 rounded-sm", mode === 'light' ? "bg-slate-200" : "bg-white/10")} />
                     </div>
                 </div>
             </div>
