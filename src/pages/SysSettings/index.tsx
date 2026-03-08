@@ -1,11 +1,8 @@
-import { useState } from 'react';
 import {
     Palette,
     Bell,
     Server,
     ShieldCheck,
-    Save,
-    RotateCcw,
     RefreshCw,
     Settings,
     ChevronRight,
@@ -25,17 +22,17 @@ export function SysSettings() {
         setTheme,
 
         gatewayPort,
-        setGatewayPort
+        setGatewayPort,
+        fileAccessAllowed,
+        setFileAccessAllowed
     } = useSettingsStore();
 
     const gatewayStatus = useGatewayStore((s) => s.status);
     const restartGateway = useGatewayStore((s) => s.restart);
 
-    const [localPort, setLocalPort] = useState(gatewayPort);
 
-    const handleSave = () => {
-        setGatewayPort(localPort);
-    };
+
+
 
     return (
         <div className="flex flex-col gap-8 pb-10 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -145,8 +142,8 @@ export function SysSettings() {
                                     <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest px-1">Gateway Port</label>
                                     <Input
                                         type="number"
-                                        value={localPort}
-                                        onChange={(e) => setLocalPort(Number(e.target.value))}
+                                        value={gatewayPort}
+                                        onChange={(e) => setGatewayPort(Number(e.target.value))}
                                         className="rounded-xl h-11 border-muted/30 focus:ring-primary/20 bg-background/50"
                                         placeholder="18766"
                                     />
@@ -172,24 +169,25 @@ export function SysSettings() {
                                 <CardTitle className="text-lg">安全与账户</CardTitle>
                             </div>
                         </CardHeader>
-                        <CardContent className="p-4 space-y-2">
+                        <CardContent className="p-4 space-y-4">
+                            <div className="flex items-center justify-between px-2 py-2 rounded-xl bg-muted/20 border border-muted/10 shadow-sm">
+                                <div className="space-y-0.5">
+                                    <div className="text-sm font-bold">文件访问权限</div>
+                                    <p className="text-[11px] text-muted-foreground">允许 AI Agent 直接读写您的本地文件</p>
+                                </div>
+                                <Switch
+                                    checked={fileAccessAllowed}
+                                    onCheckedChange={setFileAccessAllowed}
+                                />
+                            </div>
+                            <div className="h-px bg-muted/20 mx-2" />
                             <SecurityButton icon={Settings} label="修改管理密码" />
                         </CardContent>
                     </Card>
 
 
 
-                    {/* Global Actions */}
-                    <div className="flex items-center justify-end gap-3 mt-auto">
-                        <Button variant="ghost" className="h-12 px-6 rounded-2xl font-bold gap-2" onClick={() => setLocalPort(gatewayPort)}>
-                            <RotateCcw className="h-4 w-4" />
-                            撤销修改
-                        </Button>
-                        <Button className="h-12 px-8 rounded-2xl font-black bg-primary hover:bg-primary/90 shadow-xl shadow-primary/20 gap-2" onClick={handleSave}>
-                            <Save className="h-4 w-4" />
-                            保存全局设置
-                        </Button>
-                    </div>
+
                 </div>
             </div>
         </div>

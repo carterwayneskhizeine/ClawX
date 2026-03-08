@@ -42,6 +42,9 @@ interface SettingsState {
   // Setup
   setupComplete: boolean;
 
+  // Security
+  fileAccessAllowed: boolean;
+
   // Actions
   init: () => Promise<void>;
   setTheme: (theme: Theme) => void;
@@ -63,6 +66,7 @@ interface SettingsState {
   setSidebarCollapsed: (value: boolean) => void;
   setDevModeUnlocked: (value: boolean) => void;
   setUiMode: (mode: 'classic' | 'new') => void;
+  setFileAccessAllowed: (value: boolean) => void;
   markSetupComplete: () => void;
   resetSettings: () => void;
 }
@@ -93,6 +97,7 @@ const defaultSettings = {
   devModeUnlocked: false,
   uiMode: 'new' as 'classic' | 'new',
   setupComplete: false,
+  fileAccessAllowed: true,
 };
 
 export const useSettingsStore = create<SettingsState>()(
@@ -135,6 +140,7 @@ export const useSettingsStore = create<SettingsState>()(
       setSidebarCollapsed: (sidebarCollapsed) => set({ sidebarCollapsed }),
       setDevModeUnlocked: (devModeUnlocked) => set({ devModeUnlocked }),
       setUiMode: (uiMode) => { set({ uiMode }); void invokeIpc('settings:set', 'uiMode', uiMode).catch(() => { }); },
+      setFileAccessAllowed: (fileAccessAllowed) => { set({ fileAccessAllowed }); void invokeIpc('settings:set', 'fileAccessAllowed', fileAccessAllowed).catch(() => { }); },
       markSetupComplete: () => set({ setupComplete: true }),
       resetSettings: () => set(defaultSettings),
     }),
