@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useEffect, useRef, useState, useMemo, useCallback } from 'react';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import {
     Bot,
     Settings2,
@@ -9,7 +9,9 @@ import {
     MessageSquare,
     History,
     Sparkles,
-    AlertCircle
+    AlertCircle,
+    Plus,
+    RefreshCw
 } from 'lucide-react';
 import { useChatStore, type RawMessage } from '@/stores/chat';
 import { useAgentsStore } from '@/stores/agents';
@@ -31,6 +33,7 @@ import { cn } from '@/lib/utils';
 export function EmployeeChat() {
     const { id: agentId } = useParams<{ id: string }>();
     const navigate = useNavigate();
+    const [searchParams, setSearchParams] = useSearchParams();
     const gatewayStatus = useGatewayStore((s) => s.status);
     const isGatewayRunning = gatewayStatus.state === 'running';
 
@@ -45,6 +48,10 @@ export function EmployeeChat() {
     const streamingMessage = useChatStore((s) => s.streamingMessage);
     const streamingTools = useChatStore((s) => s.streamingTools);
     const pendingFinal = useChatStore((s) => s.pendingFinal);
+    const sessions = useChatStore((s) => s.sessions);
+    const currentSessionKey = useChatStore((s) => s.currentSessionKey);
+    const sessionLabels = useChatStore((s) => s.sessionLabels);
+    const sessionLastActivity = useChatStore((s) => s.sessionLastActivity);
 
     const loadHistory = useChatStore((s) => s.loadHistory);
     const loadSessions = useChatStore((s) => s.loadSessions);
@@ -53,28 +60,71 @@ export function EmployeeChat() {
     const abortRun = useChatStore((s) => s.abortRun);
     const clearError = useChatStore((s) => s.clearError);
     const cleanupEmptySession = useChatStore((s) => s.cleanupEmptySession);
+    const deleteSession = useChatStore((s) => s.deleteSession);
+    const newSession = useChatStore((s) => s.newSession);
 
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const [streamingTimestamp, setStreamingTimestamp] = useState<number>(0);
+    const [sessionsLoading, setSessionsLoading] = useState(false);
 
-    // Synchronize chat session with the selected agent
+    // URL 参数驱动的 session key
+    const sessionParam = searchParams.get('session');
+    const sessionKey = useMemo(() => {
+        if (sessionParam) {
+            if (sessionParam.startsWith('agent:')) return sessionParam;
+            return `agent:${agentId}:${sessionParam}`;
+        }
+        return `agent:${agentId}:main`;
+    }, [agentId, sessionParam]);
+
+    // Session management functions
+    const handleLoadSessions = useCallback(async () => {
+        setSessionsLoading(true);
+        try {
+            await loadSessions();
+        } finally {
+            setSessionsLoading(false);
+        }
+    }, [loadSessions]);
+
+    const handleSessionChange = useCallback((key: string) => {
+        const urlKey = key.includes(':') ? key.split(':').pop()! : key;
+        const newParams = new URLSearchParams(searchParams);
+        newParams.set('session', urlKey);
+        setSearchParams(newParams);
+    }, [searchParams, setSearchParams]);
+
+    const handleNewSession = useCallback(() => {
+        newSession();
+    }, [newSession]);
+
+    const handleDeleteSession = useCallback(async (key: string) => {
+        await deleteSession(key);
+        if (currentSessionKey === key) {
+            const newParams = new URLSearchParams(searchParams);
+            newParams.delete('session');
+            setSearchParams(newParams);
+        }
+    }, [deleteSession, currentSessionKey, searchParams, setSearchParams]);
+
+    // Synchronize chat session with selected agent and URL param
     useEffect(() => {
         if (!agentId || !isGatewayRunning) return;
 
-        const sessionKey = `agent:${agentId}:main`;
-
-        // Switch to agent's main session
-        switchSession(sessionKey);
+        // Switch to agent's session based on URL param
+        if (currentSessionKey !== sessionKey) {
+            switchSession(sessionKey);
+        }
 
         // Initial load
-        void loadSessions().then(() => {
+        void handleLoadSessions().then(() => {
             void loadHistory(false);
         });
 
         return () => {
             cleanupEmptySession();
         };
-    }, [agentId, isGatewayRunning, switchSession, loadSessions, loadHistory, cleanupEmptySession]);
+    }, [agentId, isGatewayRunning, sessionKey, currentSessionKey, switchSession, loadHistory, cleanupEmptySession, handleLoadSessions]);
 
     // Auto-scroll logic
     useEffect(() => {
@@ -144,9 +194,103 @@ export function EmployeeChat() {
                 </div>
 
                 <div className="flex items-center gap-2">
-                    <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-primary transition-colors">
-                        <History className="h-4 w-4" />
-                    </Button>
+                    <DropdownMenu onOpenChange={(open) => open && handleLoadSessions()}>
+                        <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-primary transition-colors" title="会话历史">
+                                <History className="h-4 w-4" />
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-80">
+                            <div className="px-3 py-2 border-b flex items-center justify-between">
+                                <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">会话历史</span>
+                                <div className="flex items-center gap-2">
+                                    <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={handleLoadSessions}
+                                        disabled={sessionsLoading}
+                                        className="h-7 w-7 p-0 text-muted-foreground hover:text-foreground"
+                                    >
+                                        <RefreshCw className={cn("h-3 w-3", sessionsLoading && "animate-spin")} />
+                                    </Button>
+                                    <Button
+                                        variant="default"
+                                        size="sm"
+                                        onClick={handleNewSession}
+                                        className="h-7 px-2 text-[10px] font-bold"
+                                    >
+                                        <Plus className="h-3 w-3 mr-1" />
+                                        新对话
+                                    </Button>
+                                </div>
+                            </div>
+                            <div className="max-h-80 overflow-y-auto py-1">
+                                {sessions.length === 0 ? (
+                                    <div className="px-3 py-8 text-center text-sm text-muted-foreground">
+                                        暂无历史会话
+                                    </div>
+                                ) : (
+                                    sessions
+                                        .filter(s => s.key.startsWith(`agent:${agentId}:`))
+                                        .sort((a, b) => {
+                                            const timeA = sessionLastActivity[a.key] || 0;
+                                            const timeB = sessionLastActivity[b.key] || 0;
+                                            return timeB - timeA;
+                                        })
+                                        .map((session) => {
+                                            const isCurrent = session.key === currentSessionKey;
+                                            const isMain = session.key.endsWith(':main');
+                                            const displayTitle = isMain
+                                                ? '主要对话'
+                                                : sessionLabels[session.key] || session.displayName || session.key.split(':').pop();
+
+                                            return (
+                                                <DropdownMenuItem
+                                                    key={session.key}
+                                                    onClick={() => handleSessionChange(session.key)}
+                                                    className={cn(
+                                                        "flex flex-col items-start gap-1 py-2 cursor-pointer",
+                                                        isCurrent && "bg-accent"
+                                                    )}
+                                                >
+                                                    <div className="flex items-center justify-between w-full">
+                                                        <span className={cn(
+                                                            "text-sm truncate flex-1",
+                                                            isCurrent ? "font-semibold text-primary" : "font-medium text-foreground"
+                                                        )}>
+                                                            {displayTitle}
+                                                        </span>
+                                                        {!isMain && (
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="sm"
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    handleDeleteSession(session.key);
+                                                                }}
+                                                                className="h-5 w-5 p-0 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
+                                                            >
+                                                                <Trash2 className="h-3 w-3" />
+                                                            </Button>
+                                                        )}
+                                                    </div>
+                                                    {sessionLastActivity[session.key] && (
+                                                        <span className="text-[10px] text-muted-foreground truncate w-full">
+                                                            {new Date(sessionLastActivity[session.key]!).toLocaleString('zh-CN', {
+                                                                month: 'short',
+                                                                day: 'numeric',
+                                                                hour: '2-digit',
+                                                                minute: '2-digit'
+                                                            })}
+                                                        </span>
+                                                    )}
+                                                </DropdownMenuItem>
+                                            );
+                                        })
+                                )}
+                            </div>
+                        </DropdownMenuContent>
+                    </DropdownMenu>
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                             <Button variant="ghost" size="icon" className="text-muted-foreground">
