@@ -4,7 +4,8 @@
       "Bash(npm run build --workspace=ui-react-prod)",
       "Bash(pnpm run typecheck)",
       "Bash(git:*)",
-      "Bash(OPENCLAW_HOME=\"D:/TheClaw\" node:*)"
+      "Bash(OPENCLAW_HOME=\"D:/TheClaw\" node:*)",
+      "Bash(OPENCLAW_HOME=\"D:\\\\TheClaw\" FORCE_COLOR=0 node:*)"
     ]
   }
 }

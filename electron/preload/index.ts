@@ -143,6 +143,9 @@ const electronAPI = {
         'terminal:executeCommands',
         'feishu:getAgentConfig',
         'feishu:markPaired',
+        'feishu:ensureBinding',
+        'feishu:initAccountConfig',
+        'feishu:deleteAccountConfig',
       ];
 
       if (validChannels.includes(channel)) {

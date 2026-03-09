@@ -3238,6 +3238,82 @@ function registerFeishuBindingHandlers(): void {
     }
   });
 
+  ipcMain.handle('feishu:initAccountConfig', async (_, { agentId }) => {
+    try {
+      const { readOpenClawConfig, writeOpenClawConfig } = await import('../utils/channel-config');
+      const config = await readOpenClawConfig();
+      if (!config.channels) config.channels = {};
+      if (!config.channels.feishu) config.channels.feishu = {};
+      if (!config.channels.feishu.accounts) config.channels.feishu.accounts = {};
+
+      const accounts = config.channels.feishu.accounts as any;
+      if (!accounts[agentId]) {
+        accounts[agentId] = { enabled: false, paired: false };
+        await writeOpenClawConfig(config);
+        logger.info(`[feishu:initAccountConfig] Initialized account config for ${agentId}`);
+      }
+
+      return { success: true };
+    } catch (err) {
+      logger.error(`[feishu:initAccountConfig] Error:`, err);
+      return { success: false, error: String(err) };
+    }
+  });
+
+  ipcMain.handle('feishu:deleteAccountConfig', async (_, { agentId }) => {
+    try {
+      const { readOpenClawConfig, writeOpenClawConfig } = await import('../utils/channel-config');
+      const config = await readOpenClawConfig();
+
+      // Remove account entry
+      if (config.channels?.feishu?.accounts) {
+        delete (config.channels.feishu.accounts as any)[agentId];
+      }
+
+      // Remove routing binding
+      if (config.bindings) {
+        config.bindings = (config.bindings as any[]).filter(
+          (b: any) => !(b.agentId === agentId && b.match?.channel === 'feishu')
+        );
+      }
+
+      await writeOpenClawConfig(config);
+      logger.info(`[feishu:deleteAccountConfig] Cleaned up config for ${agentId}`);
+      return { success: true };
+    } catch (err) {
+      logger.error(`[feishu:deleteAccountConfig] Error:`, err);
+      return { success: false, error: String(err) };
+    }
+  });
+
+  ipcMain.handle('feishu:ensureBinding', async (_, { agentId }) => {
+    try {
+      const { readOpenClawConfig, writeOpenClawConfig } = await import('../utils/channel-config');
+      const config = await readOpenClawConfig();
+      if (!config.bindings) config.bindings = [];
+
+      const bindings = config.bindings as any[];
+      const exists = bindings.some(
+        (b: any) => b.agentId === agentId && b.match?.channel === 'feishu' && b.match?.accountId === agentId
+      );
+
+      if (!exists) {
+        bindings.push({
+          type: 'route',
+          agentId,
+          match: { channel: 'feishu', accountId: agentId },
+        });
+        await writeOpenClawConfig(config);
+        logger.info(`[feishu:ensureBinding] Added binding for agent ${agentId}`);
+      }
+
+      return { success: true };
+    } catch (err) {
+      logger.error(`[feishu:ensureBinding] Error:`, err);
+      return { success: false, error: String(err) };
+    }
+  });
+
   ipcMain.handle('feishu:markPaired', async (_, { agentId }) => {
     try {
       const { readOpenClawConfig, writeOpenClawConfig } = await import('../utils/channel-config');

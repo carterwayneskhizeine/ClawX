@@ -163,7 +163,7 @@ export function AgentFormDialog({
                             <Input
                                 placeholder="例如：data-cleaner"
                                 value={agentId}
-                                onChange={(e) => setAgentId(e.target.value)}
+                                onChange={(e) => setAgentId(e.target.value.toLowerCase())}
                                 className={errors.agentId ? 'border-destructive' : ''}
                             />
                             {errors.agentId ? (

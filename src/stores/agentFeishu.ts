@@ -68,12 +68,10 @@ function buildConfigCommands(agentId: string, appId: string, appSecret: string):
     return [
         `openclaw config set channels.feishu.enabled true`,
         `openclaw config set channels.feishu.dmPolicy open`,
-        `openclaw config set channels.feishu.allowFrom '["*"]'`,
         `openclaw config set ${configPath}.enabled true`,
         `openclaw config set ${configPath}.appId "${appId}"`,
         `openclaw config set ${configPath}.appSecret "${appSecret}"`,
         `openclaw config set ${configPath}.paired false`,
-        `openclaw doctor --fix`,
     ];
 }
 
@@ -165,6 +163,12 @@ export const useAgentFeishuStore = create<AgentFeishuState>((set, get) => ({
             if (!result.success) {
                 throw new Error(result.error || '配置写入失败');
             }
+
+            // Ensure allowFrom is a proper array (openclaw config set can't handle arrays)
+            await invokeIpc('channel:saveConfig', 'feishu', { enabled: true, dmPolicy: 'open', allowFrom: ['*'] });
+
+            // Ensure routing binding exists so this agent doesn't fall through to another agent
+            await invokeIpc('feishu:ensureBinding', { agentId });
 
             await get().saveConfig(agentId, {
                 enabled: true,
