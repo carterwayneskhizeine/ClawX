@@ -31,7 +31,7 @@ export function Profile() {
         accountName: 'carter_nx_01',
         organization: 'OpenClaw AI 科技有限公司',
         email: 'carter@example.com',
-        avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=300&auto=format&fit=crop'
+        avatar: 'https://picsum.photos/seed/clawx-profile/300'
     };
 
     return (

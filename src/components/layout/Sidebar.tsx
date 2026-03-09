@@ -420,7 +420,7 @@ export function Sidebar() {
                   "rounded-lg overflow-hidden border border-muted-foreground/10 bg-muted",
                   sidebarCollapsed ? "h-10 w-10" : "h-8 w-8"
                 )}>
-                  <AvatarImage src="https://picsum.photos/seed/user123/200" alt="User" />
+                  <AvatarImage src="https://picsum.photos/seed/clawx-user/200" alt="User" />
                   <AvatarFallback className="rounded-lg"><User className="h-4 w-4" /></AvatarFallback>
                 </Avatar>
                 {!sidebarCollapsed && (
@@ -469,8 +469,10 @@ export function Sidebar() {
 
         <Button
           variant="ghost"
-          size="icon"
-          className="w-full"
+          className={cn(
+            "w-full transition-all flex items-center",
+            sidebarCollapsed ? "justify-center" : "justify-end px-4"
+          )}
           onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
         >
           {sidebarCollapsed ? (

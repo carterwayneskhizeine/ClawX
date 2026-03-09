@@ -295,6 +295,9 @@ export function HomeDashboard() {
 }
 
 function AgentCard({ agent, onClick }: { agent: Agent; onClick: () => void }) {
+    // 使用随机互联网照片作为头像，如果没有设置 avatarUrl
+    const avatarUrl = agent.identity?.avatarUrl || `https://picsum.photos/seed/${agent.id}/200`;
+
     return (
         <Card
             className="group relative overflow-hidden transition-all duration-300 hover:shadow-lg hover:-translate-y-1 border-slate-100 dark:border-white/5 bg-card/50 backdrop-blur-sm cursor-pointer rounded-2xl min-h-[200px] flex flex-col justify-center"
@@ -303,7 +306,7 @@ function AgentCard({ agent, onClick }: { agent: Agent; onClick: () => void }) {
             <CardContent className="p-4 pt-4 flex flex-col items-center justify-center h-full">
                 <div className="relative inline-block mb-3">
                     <Avatar className="h-16 w-16 rounded-2xl ring-1 ring-slate-100 dark:ring-white/10 group-hover:scale-110 transition-transform">
-                        <AvatarImage src={agent.identity?.avatarUrl} />
+                        <AvatarImage src={avatarUrl} />
                         <AvatarFallback className="text-2xl rounded-2xl bg-primary/10">
                             {agent.identity?.emoji || '🤖'}
                         </AvatarFallback>
