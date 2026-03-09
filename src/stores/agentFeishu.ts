@@ -72,6 +72,7 @@ function buildConfigCommands(agentId: string, appId: string, appSecret: string):
         `openclaw config set ${configPath}.appId "${appId}"`,
         `openclaw config set ${configPath}.appSecret "${appSecret}"`,
         `openclaw config set ${configPath}.paired false`,
+        `openclaw doctor --fix`,
     ];
 }
 
@@ -187,21 +188,34 @@ export const useAgentFeishuStore = create<AgentFeishuState>((set, get) => ({
 
             await invokeIpc('gateway:restart');
 
+            // Poll until gateway is healthy (packaged app can take longer to restart)
+            const MAX_WAIT_MS = 20000;
+            const POLL_INTERVAL_MS = 800;
+            const deadline = Date.now() + MAX_WAIT_MS;
+            let gatewayReady = false;
+            while (Date.now() < deadline) {
+                await new Promise(r => setTimeout(r, POLL_INTERVAL_MS));
+                try {
+                    const health = await invokeIpc<{ success: boolean; ok: boolean }>('gateway:health');
+                    if (health?.ok) { gatewayReady = true; break; }
+                } catch { /* still starting */ }
+            }
+
             set((state) => ({
                 binding: {
                     ...state.binding,
                     step: 'pairing',
-                    log: state.binding.log + '>>> 网关已重启',
+                    log: state.binding.log + (gatewayReady ? '>>> 网关已重启\n' : '>>> 网关重启超时，请检查状态\n'),
                 },
             }));
 
-            // Allow time for gateway to reconnect to Feishu
-            await new Promise(r => setTimeout(r, 2000));
+            // Extra buffer for Feishu connection to establish after gateway is up
+            await new Promise(r => setTimeout(r, 1500));
 
             set((state) => ({
                 binding: {
                     ...state.binding,
-                    log: state.binding.log + '\n>>> 配置已保存并应用，等待配对...\n',
+                    log: state.binding.log + '>>> 配置已保存并应用，等待配对...\n',
                     loading: false,
                 },
             }));
