@@ -236,7 +236,7 @@ function registerAgentRefactorHandlers(): void {
   ipcMain.handle('agent:cleanupFiles', async (_, { agentId }) => {
     logger.info(`Cleaning up files for agent: ${agentId}`);
     try {
-      const openclawDir = getOpenClawDir();
+      const openclawDir = getOpenClawConfigDir();
       const workspaceDir = join(openclawDir, `workspace-${agentId}`);
       const agentConfigDir = join(openclawDir, 'agents', agentId);
 
