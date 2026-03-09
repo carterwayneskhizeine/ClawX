@@ -3230,6 +3230,29 @@ function registerFeishuBindingHandlers(): void {
     }
   );
 
+  // Helpers for reading/writing ClawX-internal feishu pairing state.
+  // Pairing fields (paired, pairedAt, feishuBotName) are NOT part of the
+  // openclaw feishu plugin schema and must be stored separately to avoid
+  // breaking openclaw config validation (Zod strict mode).
+  async function readFeishuPairingState(): Promise<Record<string, { paired: boolean; pairedAt?: string; feishuBotName?: string }>> {
+    const { readFile } = await import('fs/promises');
+    const { getDataDir } = await import('../utils/paths');
+    const stateFile = `${getDataDir()}/feishu-pairing.json`;
+    try {
+      const raw = await readFile(stateFile, 'utf-8');
+      return JSON.parse(raw);
+    } catch {
+      return {};
+    }
+  }
+
+  async function writeFeishuPairingState(state: Record<string, { paired: boolean; pairedAt?: string; feishuBotName?: string }>): Promise<void> {
+    const { writeFile } = await import('fs/promises');
+    const { getDataDir } = await import('../utils/paths');
+    const stateFile = `${getDataDir()}/feishu-pairing.json`;
+    await writeFile(stateFile, JSON.stringify(state, null, 2), 'utf-8');
+  }
+
   ipcMain.handle('feishu:getAgentConfig', async (_, { agentId }): Promise<AgentFeishuConfig | null> => {
     try {
       const { readOpenClawConfig } = await import('../utils/channel-config');
@@ -3238,13 +3261,16 @@ function registerFeishuBindingHandlers(): void {
       const acct = accounts?.[agentId];
       if (!acct) return null;
 
+      const pairingState = await readFeishuPairingState();
+      const pairing = pairingState[agentId] ?? {};
+
       return {
         enabled: acct.enabled === true,
         appId: acct.appId,
         appSecret: acct.appSecret,
-        paired: acct.paired === true,
-        pairedAt: acct.pairedAt,
-        feishuBotName: acct.feishuBotName,
+        paired: pairing.paired === true,
+        pairedAt: pairing.pairedAt,
+        feishuBotName: pairing.feishuBotName,
       };
     } catch (err) {
       logger.error(`[feishu:getAgentConfig] Error:`, err);
@@ -3262,7 +3288,7 @@ function registerFeishuBindingHandlers(): void {
 
       const accounts = config.channels.feishu.accounts as any;
       if (!accounts[agentId]) {
-        accounts[agentId] = { enabled: false, paired: false };
+        accounts[agentId] = { enabled: false };
         await writeOpenClawConfig(config);
         logger.info(`[feishu:initAccountConfig] Initialized account config for ${agentId}`);
       }
@@ -3292,6 +3318,12 @@ function registerFeishuBindingHandlers(): void {
       }
 
       await writeOpenClawConfig(config);
+
+      // Clean up pairing state
+      const pairingState = await readFeishuPairingState();
+      delete pairingState[agentId];
+      await writeFeishuPairingState(pairingState);
+
       logger.info(`[feishu:deleteAccountConfig] Cleaned up config for ${agentId}`);
       return { success: true };
     } catch (err) {
@@ -3330,20 +3362,14 @@ function registerFeishuBindingHandlers(): void {
 
   ipcMain.handle('feishu:markPaired', async (_, { agentId }) => {
     try {
-      const { readOpenClawConfig, writeOpenClawConfig } = await import('../utils/channel-config');
-      const config = await readOpenClawConfig();
-      if (!config.channels) config.channels = {};
-      if (!config.channels.feishu) config.channels.feishu = {};
-      if (!config.channels.feishu.accounts) config.channels.feishu.accounts = {};
-
-      const accounts = config.channels.feishu.accounts as any;
-      if (accounts[agentId]) {
-        accounts[agentId].paired = true;
-        accounts[agentId].pairedAt = new Date().toISOString();
-        await writeOpenClawConfig(config);
-        return { success: true };
-      }
-      return { success: false, error: 'Account not found' };
+      const pairingState = await readFeishuPairingState();
+      pairingState[agentId] = {
+        ...pairingState[agentId],
+        paired: true,
+        pairedAt: new Date().toISOString(),
+      };
+      await writeFeishuPairingState(pairingState);
+      return { success: true };
     } catch (err) {
       return { success: false, error: String(err) };
     }
