@@ -3162,11 +3162,19 @@ function registerFeishuBindingHandlers(): void {
       const { commands, timeout = 30000 } = params;
       const { exec } = await import('child_process');
       const { getOpenClawResolvedDir, getOpenClawHomeDir } = await import('../utils/paths');
+      const path = await import('path');
       const openclawDir = getOpenClawResolvedDir();
+
+      // Use the Electron binary as the Node.js runtime (ELECTRON_RUN_AS_NODE=1).
+      // This is the reliable approach in packaged apps where no standalone node.exe exists.
+      // Mirrors the approach from issue-156: $env:ELECTRON_RUN_AS_NODE=1; & 'ClawX.exe' 'openclaw.mjs' <args>
+      const electronExe = process.execPath;
+      const openclawMjs = path.join(openclawDir, 'openclaw.mjs');
 
       logger.info('[terminal:executeCommands] Executing:', {
         count: commands.length,
         cwd: openclawDir,
+        runtime: electronExe,
       });
 
       return new Promise((resolve) => {
@@ -3181,14 +3189,20 @@ function registerFeishuBindingHandlers(): void {
 
           let cmdStr = commands[index];
           if (cmdStr.startsWith('openclaw ')) {
-            cmdStr = `node openclaw.mjs ${cmdStr.slice('openclaw '.length)}`;
+            const args = cmdStr.slice('openclaw '.length);
+            cmdStr = `"${electronExe}" "${openclawMjs}" ${args}`;
           }
 
           exec(
             cmdStr,
             {
               cwd: openclawDir,
-              env: { ...process.env, FORCE_COLOR: '0', OPENCLAW_HOME: getOpenClawHomeDir() },
+              env: {
+                ...process.env,
+                ELECTRON_RUN_AS_NODE: '1',
+                FORCE_COLOR: '0',
+                OPENCLAW_HOME: getOpenClawHomeDir(),
+              },
               windowsHide: true,
               timeout: timeout,
             },
