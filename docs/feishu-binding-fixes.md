@@ -196,3 +196,64 @@ onChange={(e) => setAgentId(e.target.value.toLowerCase())}
 | `src/stores/agentFeishu.ts` | 移除 `openclaw doctor --fix`；`startBinding` 中调用 `feishu:ensureBinding` |
 | `src/components/common/AgentFormDialog.tsx` | agentId 输入框强制小写 |
 | `build/openclaw/node_modules/@larksuiteoapi/node-sdk` | 符号链接替换为真实文件（本地修复，不入 git） |
+| `electron/main/ipc-handlers.ts` | `feishu:markPaired` 改写独立状态文件；`feishu:getAgentConfig` 从独立文件读取；`feishu:initAccountConfig` 移除 `paired: false` 写入 |
+| `src/stores/agentFeishu.ts` | `buildConfigCommands` 移除 `openclaw config set ...paired false` |
+
+---
+
+## 第二轮修复（2026-03-09）
+
+### 9. `paired` 字段破坏飞书 Zod 严格校验，导致第二个机器人绑定失败
+
+**现象**：绑定第一个飞书机器人成功后，再绑定第二个时，第一条命令就失败：
+```
+[错误] Command failed: "ClawX.exe" "openclaw.mjs" config set channels.feishu.enabled true
+```
+该命令与第一次绑定完全相同，却返回非零退出码。
+
+**根因**：飞书插件的 Zod schema（`FeishuAccountConfigSchema`）使用了 `.strict()` 模式，**拒绝任何未在 schema 中定义的字段**。
+
+ClawX 在绑定流程中向 `channels.feishu.accounts.<agentId>` 写入了以下字段：
+
+| 字段 | 来源 | 是否在 feishu schema 中 |
+|------|------|------------------------|
+| `enabled` | `openclaw config set` | ✅ 合法 |
+| `appId` | `openclaw config set` | ✅ 合法 |
+| `appSecret` | `openclaw config set` | ✅ 合法 |
+| `paired` | `openclaw config set` + `feishu:markPaired` | ❌ **非法** |
+| `pairedAt` | `feishu:markPaired` | ❌ **非法** |
+
+写入 `paired: false` 后，`openclaw.json` 变为"无效配置"。第二次绑定的第一条 `openclaw config set` 命令在执行前调用 `loadValidConfig()` 读取并验证配置，Zod strict 验证失败 → 进程以非零码退出 → `"Command failed: ..."`。
+
+**修复**：将 `paired`、`pairedAt`、`feishuBotName` 从 openclaw 配置中彻底剥离，改存到 ClawX 自管理的独立文件 `{userData}/feishu-pairing.json`：
+
+```typescript
+// 读取配对状态（不走 openclaw 配置）
+async function readFeishuPairingState() { ... }  // 读 feishu-pairing.json
+async function writeFeishuPairingState(state) { ... }  // 写 feishu-pairing.json
+
+// feishu:markPaired：只写 feishu-pairing.json，不碰 openclaw.json
+pairingState[agentId] = { paired: true, pairedAt: new Date().toISOString() };
+await writeFeishuPairingState(pairingState);
+
+// feishu:getAgentConfig：从两处合并
+const acct = openclaw.channels.feishu.accounts[agentId]; // 凭证来自 openclaw.json
+const pairing = pairingState[agentId];                   // 状态来自 feishu-pairing.json
+
+// buildConfigCommands：移除 paired 行
+// 不再执行 openclaw config set ...accounts.agentId.paired false
+```
+
+**已有损坏配置的迁移**：如果 `openclaw.json` 中已存在 `paired`/`pairedAt` 字段（由旧版本写入），下次 `openclaw config set` 仍会失败。需手动从 JSON 文件中删除这些字段，或通过解绑后重新绑定触发清理。
+
+**经验教训**：凡是写入 openclaw 配置的字段，必须先确认它在对应 Zod schema 中存在（且不受 `.strict()` 限制）。ClawX 内部的状态追踪字段（如"是否已配对"）应存储在 ClawX 自己的数据目录（`app.getPath('userData')`）中，而非 openclaw 的配置文件。
+
+---
+
+### 10. 飞书配对免输验证码（行为观察，非 Bug）
+
+**现象**：绑定第一个和第二个飞书机器人时，均无需输入配对码，直接即可收发消息。
+
+**原因**：这是飞书 SDK 的会话复用机制。在多个 openclaw 项目中使用过同一个 `appId`/`appSecret` 后，飞书服务端已建立了信任关系。即便是新的 `.openclaw` 配置目录，同一 App 凭证的 WebSocket 长连接会被识别为已知客户端，跳过配对握手。
+
+**结论**：配对码流程对于首次部署某个 App ID 的用户仍然有效，但对于之前已配对过的 App ID，飞书会自动恢复会话。ClawX 的 UI 不需要为此做特殊处理——有配对码时走配对流程，没有时直接可用。

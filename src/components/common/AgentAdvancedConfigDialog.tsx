@@ -192,6 +192,9 @@ export function AgentAdvancedConfigDialog({
                                     <p className="text-blue-600 dark:text-blue-400">
                                         请在飞书私聊机器人并发送任意消息（如"你好"），获取 8 位配对码并填入下方：
                                     </p>
+                                    <p className="text-blue-600 dark:text-blue-400 mt-1">
+                                        如果飞书机器人直接回复了你，那就不需要输入配对码，可直接使用
+                                    </p>
                                 </div>
                                 <div className="space-y-2">
                                     <Input
