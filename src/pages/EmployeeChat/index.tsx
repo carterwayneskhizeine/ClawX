@@ -2,9 +2,8 @@ import { useEffect, useRef, useState, useMemo, useCallback } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import {
     Bot,
-    Settings2,
+    Brain,
     Trash2,
-    MoreHorizontal,
     ChevronLeft,
     MessageSquare,
     History,
@@ -24,6 +23,7 @@ import {
     DropdownMenuItem,
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { ChatMessage } from '../Chat/ChatMessage';
 import { ChatInput } from '../Chat/ChatInput';
 import { extractText, extractThinking, extractImages, extractToolUse } from '../Chat/message-utils';
@@ -52,6 +52,8 @@ export function EmployeeChat() {
     const currentSessionKey = useChatStore((s) => s.currentSessionKey);
     const sessionLabels = useChatStore((s) => s.sessionLabels);
     const sessionLastActivity = useChatStore((s) => s.sessionLastActivity);
+
+    const toggleThinking = useChatStore((s) => s.toggleThinking);
 
     const loadHistory = useChatStore((s) => s.loadHistory);
     const loadSessions = useChatStore((s) => s.loadSessions);
@@ -302,23 +304,21 @@ export function EmployeeChat() {
                             </div>
                         </DropdownMenuContent>
                     </DropdownMenu>
-                    <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" className="text-muted-foreground">
-                                <MoreHorizontal className="h-4 w-4" />
+                    <Tooltip>
+                        <TooltipTrigger asChild>
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                className={cn('h-9 w-9', !showThinking && 'bg-primary/10 text-primary')}
+                                onClick={toggleThinking}
+                            >
+                                <Brain className="h-4 w-4" />
                             </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                            <DropdownMenuItem className="gap-2">
-                                <Settings2 className="h-4 w-4" />
-                                <span>设置</span>
-                            </DropdownMenuItem>
-                            <DropdownMenuItem className="text-destructive focus:text-destructive gap-2">
-                                <Trash2 className="h-4 w-4" />
-                                <span>清理会话</span>
-                            </DropdownMenuItem>
-                        </DropdownMenuContent>
-                    </DropdownMenu>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                            <p>{showThinking ? '隐藏思考过程' : '显示思考过程'}</p>
+                        </TooltipContent>
+                    </Tooltip>
                 </div>
             </header>
 
