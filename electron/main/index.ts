@@ -20,6 +20,7 @@ import { isQuitting, setQuitting } from './app-state';
 import { applyProxySettings } from './proxy';
 import { getSetting } from '../utils/store';
 import { ensureBuiltinSkillsInstalled } from '../utils/skill-config';
+import { ensureMemoryPluginInstalled } from '../utils/plugin-setup';
 
 // Disable GPU hardware acceleration globally for maximum stability across
 // all GPU configurations (no GPU, integrated, discrete).
@@ -215,6 +216,12 @@ async function initialize(): Promise<void> {
   // to ~/.openclaw/skills/ so they are immediately available without manual install.
   void ensureBuiltinSkillsInstalled().catch((error) => {
     logger.warn('Failed to install built-in skills:', error);
+  });
+
+  // Install memory-lancedb-pro plugin into D:\TheClaw\.openclaw\workspace\plugins\
+  // on first launch.  Runs npm ci in the background so startup is not blocked.
+  void ensureMemoryPluginInstalled().catch((error) => {
+    logger.warn('Failed to install memory plugin:', error);
   });
 
   // Start Gateway automatically (this seeds missing bootstrap files with full templates)
