@@ -7,6 +7,7 @@ import {
     Settings,
     CloudDownload
 } from 'lucide-react';
+import { motion } from 'framer-motion';
 import {
     BarChart,
     Bar,
@@ -51,7 +52,6 @@ const PIE_DATA = [
     { name: '已使用', value: MOCK_USER.totalPoints - MOCK_USER.points },
     { name: '剩余', value: MOCK_USER.points },
 ];
-const COLORS = ['rgba(255, 255, 255, 0.05)', '#1677ff'];
 
 export function HomeDashboard() {
     const navigate = useNavigate();
@@ -152,11 +152,15 @@ export function HomeDashboard() {
                 <h4 className="text-lg font-semibold mb-4 mx-0">算力统计仪表盘</h4>
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     {/* Pie Chart / Points Info */}
-                    <Card className="rounded-3xl border-slate-100 dark:border-white/5 bg-card h-full shadow-sm">
+                    <Card className="rounded-3xl border-slate-100 dark:border-white/5 bg-card h-full shadow-sm overflow-hidden">
                         <CardContent className="p-6">
                             <span className="uppercase tracking-wider font-semibold text-xs block mb-4 text-muted-foreground dark:text-slate-500">算力积分配额</span>
                             <div className="flex flex-col md:flex-row items-center justify-around h-[300px]">
-                                <div className="w-full max-w-[200px] h-[200px]">
+                                <motion.div
+                                    className="w-full max-w-[200px] h-[200px]"
+                                    whileHover={{ rotate: 3, scale: 1.03 }}
+                                    transition={{ type: "spring", stiffness: 300, damping: 15 }}
+                                >
                                     <ResponsiveContainer width="100%" height="100%">
                                         <PieChart>
                                             <Pie
@@ -167,9 +171,14 @@ export function HomeDashboard() {
                                                 outerRadius={80}
                                                 paddingAngle={5}
                                                 dataKey="value"
+                                                stroke="none"
                                             >
-                                                {PIE_DATA.map((entry, index) => (
-                                                    <Cell key={`cell-${index}`} fill={index === 0 ? 'rgba(226, 232, 240, 1)' : COLORS[1]} className="dark:fill-[rgba(255,255,255,0.05)]" />
+                                                {PIE_DATA.map((_entry, index) => (
+                                                    <Cell
+                                                        key={`cell-${index}`}
+                                                        fill={index === 0 ? 'rgba(226, 232, 240, 0.5)' : '#1677ff'}
+                                                        className={index === 0 ? "dark:fill-white/5" : "dark:fill-blue-500"}
+                                                    />
                                                 ))}
                                             </Pie>
                                             <Tooltip
@@ -179,7 +188,7 @@ export function HomeDashboard() {
                                             />
                                         </PieChart>
                                     </ResponsiveContainer>
-                                </div>
+                                </motion.div>
                                 <div className="space-y-4 text-center md:text-left">
                                     <div>
                                         <span className="text-xs text-muted-foreground dark:text-slate-500 block">当前可用积分</span>
@@ -190,7 +199,11 @@ export function HomeDashboard() {
                                         <div className="text-xl font-bold text-slate-700 dark:text-slate-200">1,240</div>
                                     </div>
                                     <div className="pt-2">
-                                        <Button size="lg" className="rounded-xl font-bold shadow-lg shadow-blue-100 dark:shadow-none bg-blue-600 hover:bg-blue-700 text-white">
+                                        <Button
+                                            size="lg"
+                                            className="rounded-xl font-bold shadow-lg shadow-blue-100 dark:shadow-none bg-blue-600 hover:bg-blue-700 text-white transition-transform hover:scale-105 active:scale-95"
+                                            onClick={() => navigate('/points?recharge=true')}
+                                        >
                                             立即充值
                                         </Button>
                                     </div>

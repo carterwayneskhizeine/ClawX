@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
     Zap,
     History,
@@ -50,6 +51,18 @@ export function ComputePoints() {
     const [logs, setLogs] = useState<ComputeLog[]>(MOCK_COMPUTE_LOGS);
     const [userPoints, setUserPoints] = useState(MOCK_USER.points);
     const [currentPage, setCurrentPage] = useState(1);
+    const [searchParams, setSearchParams] = useSearchParams();
+
+    useEffect(() => {
+        if (searchParams.get('recharge') === 'true') {
+            setShowRecharge(true);
+            // Optionally clear the parameter so it doesn't reopen on refresh if desired
+            // But usually, it's fine as per user request
+            const newParams = new URLSearchParams(searchParams);
+            newParams.delete('recharge');
+            setSearchParams(newParams, { replace: true });
+        }
+    }, [searchParams, setSearchParams]);
 
     const totalPages = Math.ceil(logs.length / ITEMS_PER_PAGE);
     const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
