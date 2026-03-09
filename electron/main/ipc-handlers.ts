@@ -227,9 +227,6 @@ export function registerIpcHandlers(
 
   // Feishu multi-agent binding handlers
   registerFeishuBindingHandlers();
-
-  // PTY terminal handlers (interactive shell via node-pty)
-  registerPtyHandlers(mainWindow);
 }
 
 /**

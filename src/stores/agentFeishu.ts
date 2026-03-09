@@ -72,7 +72,6 @@ function buildConfigCommands(agentId: string, appId: string, appSecret: string):
         `openclaw config set ${configPath}.appId "${appId}"`,
         `openclaw config set ${configPath}.appSecret "${appSecret}"`,
         `openclaw config set ${configPath}.paired false`,
-        `openclaw doctor --fix`,
     ];
 }
 
