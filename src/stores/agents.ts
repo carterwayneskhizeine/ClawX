@@ -155,6 +155,10 @@ export const useAgentsStore = create<AgentsState>((set, get) => ({
                 workspaceDir: workspacePath,
             }).catch(err => console.warn('Template copy failed:', err));
 
+            // Step 4: Initialize empty Feishu config for this agent
+            await invokeIpc('feishu:initAccountConfig', { agentId })
+                .catch(err => console.warn('Feishu config init failed:', err));
+
             await get().fetchAgents();
             // 触发侧边栏更新事件
             dispatchAgentsUpdated();
@@ -186,6 +190,11 @@ export const useAgentsStore = create<AgentsState>((set, get) => ({
             // Step 2: Cleanup matching files via Electron IPC
             await invokeIpc('agent:cleanupFiles', { agentId }).catch(err =>
                 console.warn('File cleanup failed:', err)
+            );
+
+            // Step 3: Cleanup Feishu config
+            await invokeIpc('feishu:deleteAccountConfig', { agentId }).catch(err =>
+                console.warn('Feishu config cleanup failed:', err)
             );
 
             // Step 3: 清理本地缓存的显示名称

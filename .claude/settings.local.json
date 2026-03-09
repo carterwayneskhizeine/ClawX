@@ -2,7 +2,9 @@
   "permissions": {
     "allow": [
       "Bash(npm run build --workspace=ui-react-prod)",
-      "Bash(pnpm run typecheck)"
+      "Bash(pnpm run typecheck)",
+      "Bash(git:*)",
+      "Bash(OPENCLAW_HOME=\"D:/TheClaw\" node:*)"
     ]
   }
 }

@@ -103,8 +103,8 @@ export function getOpenClawDir(): string {
   if (app.isPackaged) {
     return join(process.resourcesPath, 'openclaw');
   }
-  // Development: use node_modules/openclaw
-  return join(__dirname, '../../node_modules/openclaw');
+  // Development: use build/openclaw
+  return join(__dirname, '../../build/openclaw');
 }
 
 /**

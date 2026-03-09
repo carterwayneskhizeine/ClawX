@@ -7,7 +7,7 @@
 import { access, mkdir, readFile, writeFile, readdir, stat, rm } from 'fs/promises';
 import { constants } from 'fs';
 import { join } from 'path';
-import { getOpenClawResolvedDir, getOpenClawConfigDir } from './paths';
+import { getOpenClawResolvedDir, getOpenClawConfigDir, getOpenClawHomeDir } from './paths';
 import * as logger from './logger';
 import { proxyAwareFetch } from './proxy-fetch';
 
@@ -36,10 +36,31 @@ export interface PluginsConfig {
 }
 
 export interface OpenClawConfig {
-    channels?: Record<string, ChannelConfigData>;
+    channels?: Record<string, ChannelConfigData & { [key: string]: any }>;
     plugins?: PluginsConfig;
     commands?: Record<string, unknown>;
     [key: string]: unknown;
+}
+
+/**
+ * Feishu account configuration for a single agent
+ */
+export interface FeishuAccountConfig {
+    enabled?: boolean;
+    appId?: string;
+    appSecret?: string;
+    paired?: boolean;
+    pairedAt?: string;
+    feishuBotName?: string;
+}
+
+/**
+ * Feishu channel configuration with multi-agent support
+ */
+export interface FeishuChannelConfig extends ChannelConfigData {
+    dmPolicy?: 'open' | 'closed';
+    allowFrom?: string[];
+    accounts?: Record<string, FeishuAccountConfig>;
 }
 
 // ── Config I/O ───────────────────────────────────────────────────
@@ -209,17 +230,19 @@ export async function saveChannelConfig(
     // Special handling for Feishu: default to open DM policy with wildcard allowlist
     if (channelType === 'feishu') {
         const existingConfig = currentConfig.channels[channelType] || {};
-        transformedConfig.dmPolicy = transformedConfig.dmPolicy ?? existingConfig.dmPolicy ?? 'open';
 
+        // Preserve existing accounts when saving top-level config
+        transformedConfig.accounts = existingConfig.accounts || {};
+
+        // Set defaults
+        transformedConfig.dmPolicy = transformedConfig.dmPolicy ?? existingConfig.dmPolicy ?? 'open';
         let allowFrom = transformedConfig.allowFrom ?? existingConfig.allowFrom ?? ['*'];
         if (!Array.isArray(allowFrom)) {
             allowFrom = [allowFrom];
         }
-
         if (transformedConfig.dmPolicy === 'open' && !allowFrom.includes('*')) {
             allowFrom = [...allowFrom, '*'];
         }
-
         transformedConfig.allowFrom = allowFrom;
     }
 
@@ -535,6 +558,7 @@ export async function validateChannelConfig(channelType: string): Promise<Valida
                     encoding: 'utf-8',
                     timeout: 30000,
                     windowsHide: true,
+                    env: { ...process.env, OPENCLAW_HOME: getOpenClawHomeDir() },
                 },
                 (err, stdout) => {
                     if (err) reject(err);
@@ -610,4 +634,94 @@ export async function validateChannelConfig(channelType: string): Promise<Valida
     }
 
     return result;
+}
+
+/**
+ * Save Feishu configuration for a specific agent
+ */
+export async function saveFeishuAccountConfig(
+    agentId: string,
+    config: FeishuAccountConfig
+): Promise<void> {
+    const currentConfig = await readOpenClawConfig();
+
+    if (!currentConfig.channels) currentConfig.channels = {};
+    if (!currentConfig.channels.feishu) currentConfig.channels.feishu = {};
+    if (!currentConfig.channels.feishu.accounts) currentConfig.channels.feishu.accounts = {};
+
+    const accounts = currentConfig.channels.feishu.accounts as Record<string, FeishuAccountConfig>;
+    accounts[agentId] = {
+        ...(accounts[agentId] || {}),
+        ...config,
+    };
+
+    // Ensure top-level feishu is enabled
+    currentConfig.channels.feishu.enabled = true;
+
+    await writeOpenClawConfig(currentConfig);
+    logger.info(`Feishu account config saved: ${agentId}`);
+}
+
+/**
+ * Get Feishu configuration for a specific agent
+ */
+export async function getFeishuAccountConfig(
+    agentId: string
+): Promise<FeishuAccountConfig | null> {
+    const config = await readOpenClawConfig();
+    const accounts = config.channels?.feishu?.accounts as Record<string, FeishuAccountConfig> | undefined;
+    return accounts?.[agentId] || null;
+}
+
+/**
+ * Delete Feishu configuration for an agent
+ */
+export async function deleteFeishuAccountConfig(agentId: string): Promise<void> {
+    const currentConfig = await readOpenClawConfig();
+    const accounts = currentConfig.channels?.feishu?.accounts as Record<string, FeishuAccountConfig> | undefined;
+    if (accounts?.[agentId]) {
+        delete accounts[agentId];
+        await writeOpenClawConfig(currentConfig);
+        logger.info(`Deleted Feishu config for ${agentId}`);
+    }
+}
+
+/**
+ * Initialize empty Feishu config for a new agent
+ */
+export async function initFeishuAccountConfig(agentId: string): Promise<void> {
+    const currentConfig = await readOpenClawConfig();
+    if (!currentConfig.channels) currentConfig.channels = {};
+    if (!currentConfig.channels.feishu) currentConfig.channels.feishu = {};
+    if (!currentConfig.channels.feishu.accounts) currentConfig.channels.feishu.accounts = {};
+
+    const accounts = currentConfig.channels.feishu.accounts as Record<string, FeishuAccountConfig>;
+    if (!accounts[agentId]) {
+        accounts[agentId] = { enabled: false, paired: false };
+        await writeOpenClawConfig(currentConfig);
+        logger.info(`Initialized empty Feishu config for agent: ${agentId}`);
+    }
+}
+
+/**
+ * Migrate legacy Feishu config to multi-agent format
+ */
+export async function migrateLegacyFeishuConfig(): Promise<void> {
+    const config = await readOpenClawConfig();
+    const feishu = config.channels?.feishu as any;
+
+    if (feishu && feishu.appId && (!feishu.accounts || Object.keys(feishu.accounts).length === 0)) {
+        logger.info('Migrating legacy Feishu config');
+        feishu.accounts = {
+            main: {
+                enabled: feishu.enabled ?? true,
+                appId: feishu.appId,
+                appSecret: feishu.appSecret,
+                paired: true,
+            }
+        };
+        delete feishu.appId;
+        delete feishu.appSecret;
+        await writeOpenClawConfig(config);
+    }
 }

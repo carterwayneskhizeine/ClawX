@@ -18,6 +18,7 @@ import {
     Cell
 } from 'recharts';
 import { useAgentsStore, Agent } from '@/stores/agents';
+import { useAgentFeishuConfig } from '@/stores/agentFeishu';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -47,7 +48,7 @@ const PIE_DATA = [
 export function HomeDashboard() {
     const navigate = useNavigate();
     const { agents, fetchAgents, deleteAgent, createAgent, updateAgent, loading } = useAgentsStore();
-    const [searchQuery, setSearchQuery] = useState('');
+    const [searchQuery] = useState('');
 
     // Dialog states
     const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
@@ -304,6 +305,9 @@ function AgentCard({ agent, onClick }: { agent: Agent; onClick: () => void }) {
             onClick={onClick}
         >
             <CardContent className="p-4 pt-4 flex flex-col items-center justify-center h-full">
+                <div className="absolute top-2 right-2">
+                    <AgentFeishuStatus agentId={agent.id} />
+                </div>
                 <div className="relative inline-block mb-3">
                     <Avatar className="h-16 w-16 rounded-2xl ring-1 ring-slate-100 dark:ring-white/10 group-hover:scale-110 transition-transform">
                         <AvatarImage src={avatarUrl} />
@@ -325,5 +329,23 @@ function AgentCard({ agent, onClick }: { agent: Agent; onClick: () => void }) {
 
             </CardContent>
         </Card>
+    );
+}
+
+function AgentFeishuStatus({ agentId }: { agentId: string }) {
+    const config = useAgentFeishuConfig(agentId);
+
+    if (!config?.enabled) return null;
+
+    return (
+        <div
+            className={cn(
+                "w-2 h-2 rounded-full",
+                config.paired
+                    ? "bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]"
+                    : "bg-amber-500 animate-pulse shadow-[0_0_8px_rgba(245,158,11,0.6)]"
+            )}
+            title={config.paired ? '飞书已绑定' : '飞书待配对'}
+        />
     );
 }

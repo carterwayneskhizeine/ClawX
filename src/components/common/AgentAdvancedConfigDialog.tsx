@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Settings2, CheckCircle2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -12,6 +12,8 @@ import {
     DialogTitle,
 } from '@/components/ui/dialog'
 import { Agent } from '@/stores/agents'
+import { useAgentFeishuStore, useAgentFeishuConfig } from '@/stores/agentFeishu'
+import { BindingTerminalLog } from './BindingTerminalLog'
 
 interface AgentAdvancedConfigDialogProps {
     open: boolean
@@ -24,37 +26,62 @@ export function AgentAdvancedConfigDialog({
     onOpenChange,
     agent
 }: AgentAdvancedConfigDialogProps) {
+    const {
+        loadConfig,
+        resetBinding,
+        startBinding,
+        approvePairing,
+        unbind,
+        binding
+    } = useAgentFeishuStore()
+    const config = useAgentFeishuConfig(agent?.id || null)
+
     const [appId, setAppId] = useState('')
     const [appSecret, setAppSecret] = useState('')
     const [pairingCode, setPairingCode] = useState('')
-    const [bindingStep, setBindingStep] = useState<'input' | 'pairing' | 'done'>('input')
-    const [bindingLoading, setBindingLoading] = useState(false)
+
+    // From Store
+    const bindingStep = binding.step
+    const bindingLoading = binding.loading
+    const bindingLog = binding.log
+    const bindingError = binding.error
+
+    useEffect(() => {
+        if (open && agent?.id) {
+            loadConfig(agent.id)
+            resetBinding()
+            setAppId('')
+            setAppSecret('')
+            setPairingCode('')
+        }
+    }, [open, agent?.id, loadConfig, resetBinding])
+
+    useEffect(() => {
+        if (config?.appId && !appId) {
+            setAppId(config.appId)
+        }
+    }, [config?.appId, appId])
 
     const handleBindFeishu = async () => {
-        if (!appId || !appSecret) return
-
-        setBindingLoading(true)
-        // Simulate API call
-        await new Promise(resolve => setTimeout(resolve, 1500))
-        setBindingLoading(false)
-        setBindingStep('pairing')
+        if (!agent?.id || !appId || !appSecret) return
+        await startBinding(agent.id, appId, appSecret)
     }
 
     const handleApprovePairing = async () => {
-        if (!pairingCode) return
+        if (!agent?.id || !pairingCode) return
+        await approvePairing(agent.id, pairingCode)
+    }
 
-        setBindingLoading(true)
-        // Simulate API call
-        await new Promise(resolve => setTimeout(resolve, 1500))
-        setBindingLoading(false)
-        setBindingStep('done')
+    const handleUnbind = async () => {
+        if (!agent?.id) return
+        await unbind(agent.id)
     }
 
     const handleClose = () => {
+        resetBinding()
         setAppId('')
         setAppSecret('')
         setPairingCode('')
-        setBindingStep('input')
         onOpenChange(false)
     }
 
@@ -85,16 +112,14 @@ export function AgentAdvancedConfigDialog({
                                     </div>
                                     <div>
                                         <p className="font-medium">飞书 Robot</p>
-                                        <p className="text-xs text-muted-foreground">自动化集成协议</p>
+                                        <p className="text-xs text-muted-foreground">多账号独立绑定协议</p>
                                     </div>
                                 </div>
-                                <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => {}}
-                                >
-                                    配置
-                                </Button>
+                                {config?.paired && (
+                                    <span className="text-xs px-2 py-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 rounded-full">
+                                        已绑定
+                                    </span>
+                                )}
                             </div>
                         </div>
                     </div>
@@ -103,7 +128,32 @@ export function AgentAdvancedConfigDialog({
                     <div className="space-y-4 pt-4 border-t">
                         <Label className="text-sm font-medium">飞书绑定配置</Label>
 
-                        {bindingStep === 'input' && (
+                        {/* 已绑定状态 - 显示展示与解绑 */}
+                        {config?.paired && bindingStep === 'idle' && (
+                            <div className="space-y-3">
+                                <div className="p-3 rounded-lg bg-green-50 dark:bg-green-900/20">
+                                    <p className="text-sm text-green-700 dark:text-green-300">
+                                        <span className="font-medium">App ID:</span> {config.appId}
+                                    </p>
+                                    {config.pairedAt && (
+                                        <p className="text-xs text-green-600 dark:text-green-400 mt-1">
+                                            配对时间: {new Date(config.pairedAt).toLocaleString()}
+                                        </p>
+                                    )}
+                                </div>
+                                <Button
+                                    variant="outline"
+                                    className="w-full text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/30"
+                                    onClick={handleUnbind}
+                                    disabled={bindingLoading}
+                                >
+                                    {bindingLoading ? '解绑中...' : '解除绑定'}
+                                </Button>
+                            </div>
+                        )}
+
+                        {/* 未绑定状态 - 显示输入表单 */}
+                        {!config?.paired && bindingStep === 'idle' && (
                             <div className="space-y-3">
                                 <div className="space-y-2">
                                     <Label htmlFor="appId" className="text-xs">App ID (cli_开头)</Label>
@@ -129,16 +179,16 @@ export function AgentAdvancedConfigDialog({
                                     onClick={handleBindFeishu}
                                     disabled={!appId || !appSecret || bindingLoading}
                                 >
-                                    {bindingLoading && <span className="mr-2">⏳</span>}
-                                    一键绑定并配置
+                                    {bindingLoading ? '绑定中...' : '一键绑定并配置'}
                                 </Button>
                             </div>
                         )}
 
+                        {/* 输入凭证后的配对步骤 */}
                         {bindingStep === 'pairing' && (
                             <div className="space-y-3">
                                 <div className="p-3 rounded-lg bg-blue-50 dark:bg-blue-900/20 text-sm">
-                                    <p className="font-medium text-blue-700 dark:text-blue-300 mb-1">第一步绑定完成！</p>
+                                    <p className="font-medium text-blue-700 dark:text-blue-300 mb-1">配置已保存！</p>
                                     <p className="text-blue-600 dark:text-blue-400">
                                         请在飞书私聊机器人并发送任意消息（如"你好"），获取 8 位配对码并填入下方：
                                     </p>
@@ -156,12 +206,12 @@ export function AgentAdvancedConfigDialog({
                                     onClick={handleApprovePairing}
                                     disabled={pairingCode.length !== 8 || bindingLoading}
                                 >
-                                    {bindingLoading && <span className="mr-2">⏳</span>}
-                                    确认配对
+                                    {bindingLoading ? '配对中...' : '确认配对'}
                                 </Button>
                             </div>
                         )}
 
+                        {/* 绑定完成 */}
                         {bindingStep === 'done' && (
                             <div className="p-4 rounded-lg bg-green-50 dark:bg-green-900/20 text-center">
                                 <CheckCircle2 className="h-8 w-8 mx-auto mb-2 text-green-500" />
@@ -170,6 +220,29 @@ export function AgentAdvancedConfigDialog({
                                     飞书机器人可以开始使用了。
                                 </p>
                             </div>
+                        )}
+
+                        {/* 错误状态 */}
+                        {bindingStep === 'error' && (
+                            <div className="p-3 rounded-lg bg-red-50 dark:bg-red-900/20">
+                                <p className="text-sm text-red-700 dark:text-red-300 font-medium">绑定失败</p>
+                                <p className="text-sm text-red-600 dark:text-red-400 mt-1">
+                                    {bindingError || '请检查 AppID/AppSecret 是否正确'}
+                                </p>
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="mt-2"
+                                    onClick={() => resetBinding()}
+                                >
+                                    重试
+                                </Button>
+                            </div>
+                        )}
+
+                        {/* 终端日志显示 */}
+                        {bindingLog && (bindingStep !== 'done' && bindingStep !== 'idle') && (
+                            <BindingTerminalLog log={bindingLog} />
                         )}
                     </div>
                 </div>
@@ -183,3 +256,4 @@ export function AgentAdvancedConfigDialog({
         </Dialog>
     )
 }
+

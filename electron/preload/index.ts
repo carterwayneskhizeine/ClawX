@@ -139,6 +139,10 @@ const electronAPI = {
         // Agent UI Refactor
         'agent:cleanupFiles',
         'agent:copyTemplates',
+        // Feishu multi-agent binding
+        'terminal:executeCommands',
+        'feishu:getAgentConfig',
+        'feishu:markPaired',
       ];
 
       if (validChannels.includes(channel)) {

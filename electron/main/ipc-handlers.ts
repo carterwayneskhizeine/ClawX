@@ -3,6 +3,7 @@
  * Registers all IPC handlers for main-renderer communication
  */
 import { ipcMain, BrowserWindow, shell, dialog, app, nativeImage } from 'electron';
+import { spawn } from 'node:child_process';
 import { existsSync, cpSync, mkdirSync, rmSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join, extname, basename } from 'node:path';
@@ -83,6 +84,15 @@ import {
   normalizeOAuthBaseUrl,
   usesOAuthAuthHeader,
 } from '../utils/provider-keys';
+
+interface AgentFeishuConfig {
+  enabled: boolean;
+  appId?: string;
+  appSecret?: string;
+  paired: boolean;
+  pairedAt?: string;
+  feishuBotName?: string;
+}
 
 /**
  * Derive OpenClaw provider key used in openclaw.json / models.json.
@@ -214,6 +224,9 @@ export function registerIpcHandlers(
 
   // Agent UI refactor handlers
   registerAgentRefactorHandlers();
+
+  // Feishu multi-agent binding handlers
+  registerFeishuBindingHandlers();
 }
 
 /**
@@ -278,7 +291,7 @@ function registerAgentRefactorHandlers(): void {
   });
 }
 
-function mapAppErrorCode(error: unknown): AppResponse['error']['code'] {
+function mapAppErrorCode(error: unknown): NonNullable<AppResponse['error']>['code'] {
   const msg = error instanceof Error ? error.message.toLowerCase() : String(error).toLowerCase();
   if (msg.includes('timeout')) return 'TIMEOUT';
   if (msg.includes('permission') || msg.includes('denied') || msg.includes('forbidden')) return 'PERMISSION';
@@ -809,10 +822,10 @@ function registerUnifiedRequestHandlers(gatewayManager: GatewayManager): void {
               | [{ name: string; message: string; schedule: string; enabled?: boolean }]
               | { name: string; message: string; schedule: string; enabled?: boolean }
               | undefined;
-            const input = Array.isArray(payload)
+            const input = (Array.isArray(payload)
               ? payload[0]
-              : ('input' in (payload ?? {}) ? (payload as { input: { name: string; message: string; schedule: string; enabled?: boolean } }).input : payload);
-            if (!input) throw new Error('Invalid cron.create payload');
+              : (payload && typeof payload === 'object' && 'input' in payload ? (payload as any).input : payload)) as { name: string; message: string; schedule: string; enabled?: boolean } | undefined;
+            if (!input || !input.name) throw new Error('Invalid cron.create payload');
             const gatewayInput = {
               name: input.name,
               schedule: { kind: 'cron', expr: input.schedule },
@@ -3130,6 +3143,118 @@ function registerSessionHandlers(): void {
       return { success: true };
     } catch (err) {
       logger.error(`[session:delete] Unexpected error for ${sessionKey}:`, err);
+      return { success: false, error: String(err) };
+    }
+  });
+}
+
+function registerFeishuBindingHandlers(): void {
+  ipcMain.handle(
+    'terminal:executeCommands',
+    async (
+      _,
+      params: {
+        commands: string[];
+        workingDir?: string;
+        timeout?: number;
+      }
+    ): Promise<{ success: boolean; output: string; error?: string }> => {
+      const { commands, timeout = 30000 } = params;
+      const { exec } = await import('child_process');
+      const { getOpenClawResolvedDir, getOpenClawHomeDir } = await import('../utils/paths');
+      const openclawDir = getOpenClawResolvedDir();
+
+      logger.info('[terminal:executeCommands] Executing:', {
+        count: commands.length,
+        cwd: openclawDir,
+      });
+
+      return new Promise((resolve) => {
+        let currentOutput = '';
+        let hasError = false;
+
+        const runCommand = (index: number) => {
+          if (index >= commands.length) {
+            resolve({ success: !hasError, output: currentOutput });
+            return;
+          }
+
+          let cmdStr = commands[index];
+          if (cmdStr.startsWith('openclaw ')) {
+            cmdStr = `node openclaw.mjs ${cmdStr.slice('openclaw '.length)}`;
+          }
+
+          exec(
+            cmdStr,
+            {
+              cwd: openclawDir,
+              env: { ...process.env, FORCE_COLOR: '0', OPENCLAW_HOME: getOpenClawHomeDir() },
+              windowsHide: true,
+              timeout: timeout,
+            },
+            (error, stdout, stderr) => {
+              currentOutput += `> ${commands[index]}\n`;
+              if (stdout) currentOutput += stdout;
+              if (stderr) currentOutput += stderr;
+
+              if (error) {
+                hasError = true;
+                resolve({
+                  success: false,
+                  output: currentOutput,
+                  error: error.message,
+                });
+              } else {
+                runCommand(index + 1);
+              }
+            }
+          );
+        };
+
+        runCommand(0);
+      });
+    }
+  );
+
+  ipcMain.handle('feishu:getAgentConfig', async (_, { agentId }): Promise<AgentFeishuConfig | null> => {
+    try {
+      const { readOpenClawConfig } = await import('../utils/channel-config');
+      const config = await readOpenClawConfig();
+      const accounts = config.channels?.feishu?.accounts as any;
+      const acct = accounts?.[agentId];
+      if (!acct) return null;
+
+      return {
+        enabled: acct.enabled === true,
+        appId: acct.appId,
+        appSecret: acct.appSecret,
+        paired: acct.paired === true,
+        pairedAt: acct.pairedAt,
+        feishuBotName: acct.feishuBotName,
+      };
+    } catch (err) {
+      logger.error(`[feishu:getAgentConfig] Error:`, err);
+      return null;
+    }
+  });
+
+  ipcMain.handle('feishu:markPaired', async (_, { agentId }) => {
+    try {
+      const { readOpenClawConfig, writeOpenClawConfig } = await import('../utils/channel-config');
+      const config = await readOpenClawConfig();
+      if (!config.channels) config.channels = {};
+      if (!config.channels.feishu) config.channels.feishu = {};
+      if (!config.channels.feishu.accounts) config.channels.feishu.accounts = {};
+
+      const accounts = config.channels.feishu.accounts as any;
+      if (accounts[agentId]) {
+        accounts[agentId].paired = true;
+        accounts[agentId].pairedAt = new Date().toISOString();
+        await writeOpenClawConfig(config);
+        return { success: true };
+      }
+      return { success: false, error: 'Account not found' };
+    } catch (err) {
       return { success: false, error: String(err) };
     }
   });
