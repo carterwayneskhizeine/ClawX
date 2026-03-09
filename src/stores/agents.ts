@@ -16,9 +16,33 @@ export interface Agent {
     status: 'idle' | 'busy' | 'offline';
 }
 
+// 本地缓存 key
+const AGENT_NAMES_STORAGE_KEY = 'clawx_agent_display_names';
+
+// 从 localStorage 加载缓存的显示名称
+function loadAgentDisplayNames(): Record<string, string> {
+    try {
+        const stored = localStorage.getItem(AGENT_NAMES_STORAGE_KEY);
+        return stored ? JSON.parse(stored) : {};
+    } catch {
+        return {};
+    }
+}
+
+// 保存到 localStorage
+function saveAgentDisplayNames(names: Record<string, string>) {
+    try {
+        localStorage.setItem(AGENT_NAMES_STORAGE_KEY, JSON.stringify(names));
+    } catch (e) {
+        console.warn('Failed to save agent display names:', e);
+    }
+}
+
 interface AgentsState {
     agents: Agent[];
     loading: boolean;
+    // 本地缓存的显示名称映射 (agentId -> displayName)
+    agentDisplayNames: Record<string, string>;
     fetchAgents: () => Promise<void>;
     createAgent: (params: {
         agentId: string;
@@ -39,6 +63,7 @@ export function dispatchAgentsUpdated() {
 export const useAgentsStore = create<AgentsState>((set, get) => ({
     agents: [],
     loading: false,
+    agentDisplayNames: loadAgentDisplayNames(),
 
     fetchAgents: async () => {
         set({ loading: true });
@@ -56,15 +81,25 @@ export const useAgentsStore = create<AgentsState>((set, get) => ({
                 agentsList = res.agents;
             }
 
-            let mappedAgents: Agent[] = (agentsList).map((agent: any) => ({
-                id: agent.id,
-                name: agent.identity?.name || agent.name || (agent.id === 'main' ? '通用助手' : agent.id),
-                workspace: agent.workspace,
-                identity: agent.identity,
-                // 所有在 Gateway 中存在的 agent 都默认为 idle（在线）
-                // 只有当 Gateway 返回明确的状态信息时才有 busy
-                status: 'idle' as const,
-            }));
+            // 获取本地缓存的显示名称
+            const cachedNames = get().agentDisplayNames;
+
+            let mappedAgents: Agent[] = (agentsList).map((agent: any) => {
+                // 优先使用本地缓存的名称（用户创建时输入的中文名）
+                // 其次使用 Gateway 返回的 name
+                // 最后使用 id
+                const cachedName = cachedNames[agent.id];
+                const displayName = cachedName || agent.name || agent.identity?.name || (agent.id === 'main' ? '通用助手' : agent.id);
+                return {
+                    id: agent.id,
+                    name: displayName,
+                    workspace: agent.workspace,
+                    identity: agent.identity,
+                    // 所有在 Gateway 中存在的 agent 都默认为 idle（在线）
+                    // 只有当 Gateway 返回明确的状态信息时才有 busy
+                    status: 'idle' as const,
+                };
+            });
 
             // 不再使用默认 main agent 兜底，等待 Gateway 准备好后自动刷新
             set({ agents: mappedAgents });
@@ -80,6 +115,12 @@ export const useAgentsStore = create<AgentsState>((set, get) => ({
     createAgent: async ({ agentId, displayName, emoji, workspace }) => {
         set({ loading: true });
         try {
+            // Step 0: 先保存显示名称到本地缓存（乐观更新）
+            const currentNames = get().agentDisplayNames;
+            const newNames = { ...currentNames, [agentId]: displayName };
+            set({ agentDisplayNames: newNames });
+            saveAgentDisplayNames(newNames);
+
             // Step 1: Create agent with English ID
             const workspacePath = workspace || `D:\\TheClaw\\.openclaw\\workspace-${agentId}`;
             await invokeIpc('gateway:rpc', 'agents.create', {
@@ -140,6 +181,15 @@ export const useAgentsStore = create<AgentsState>((set, get) => ({
             await invokeIpc('agent:cleanupFiles', { agentId }).catch(err =>
                 console.warn('File cleanup failed:', err)
             );
+
+            // Step 3: 清理本地缓存的显示名称
+            const currentNames = get().agentDisplayNames;
+            if (currentNames[agentId]) {
+                const newNames = { ...currentNames };
+                delete newNames[agentId];
+                set({ agentDisplayNames: newNames });
+                saveAgentDisplayNames(newNames);
+            }
 
             await get().fetchAgents();
             // 触发侧边栏更新事件
