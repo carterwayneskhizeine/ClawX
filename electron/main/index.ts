@@ -41,9 +41,9 @@ app.disableHardwareAcceleration();
 // On Wayland this maps the running window to clawx.desktop (→ icon + app grouping);
 // on X11 it supplements the StartupWMClass matching.
 // Must be called before app.whenReady() / before any window is created.
-if (process.platform === 'linux') {
-  app.setDesktopName('clawx.desktop');
-}
+// if (process.platform === 'linux') {
+//   app.setDesktopName('clawx.desktop');
+// }
 
 // Prevent multiple instances of the app from running simultaneously.
 // Without this, two instances each spawn their own gateway process on the
@@ -109,6 +109,7 @@ function createWindow(): BrowserWindow {
     trafficLightPosition: isMac ? { x: 16, y: 16 } : undefined,
     frame: isMac,
     show: false,
+    title: 'OPC数字员工智能助手'
   });
 
   // Show window when ready to prevent visual flash
@@ -139,7 +140,7 @@ function createWindow(): BrowserWindow {
 async function initialize(): Promise<void> {
   // Initialize logger first
   logger.init();
-  logger.info('=== ClawX Application Starting ===');
+  logger.info('=== Dysense Application Starting ===');
   logger.debug(
     `Runtime: platform=${process.platform}/${process.arch}, electron=${process.versions.electron}, node=${process.versions.node}, packaged=${app.isPackaged}`
   );

@@ -1,8 +1,7 @@
 import { useEffect, useState } from 'react';
 import {
     Plus,
-    Settings,
-    CloudDownload
+    Settings
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import {
@@ -85,12 +84,12 @@ export function HomeDashboard() {
                     <h2 className="text-3xl font-bold tracking-tight mb-1">控制面板</h2>
                     <p className="text-muted-foreground text-sm">欢迎您，这是您的数字员工概览</p>
                 </div>
-                <Button
+                {/* <Button
                     className="rounded-xl shadow-sm bg-green-500 hover:bg-green-600 dark:bg-green-500 dark:hover:bg-green-400 dark:text-white border-none flex items-center justify-center gap-2 px-4"
                 >
                     <CloudDownload className="h-4 w-4" />
                     <span>发现新版本</span>
-                </Button>
+                </Button> */}
             </header>
 
             {/* Agents Section */}
@@ -305,9 +304,9 @@ function AgentCard({ agent, onClick }: { agent: Agent; onClick: () => void }) {
             onClick={onClick}
         >
             <CardContent className="p-4 pt-4 flex flex-col items-center justify-center h-full">
-                <div className="absolute top-2 right-2">
+                {/* <div className="absolute top-2 right-2">
                     <AgentFeishuStatus agentId={agent.id} />
-                </div>
+                </div> */}
                 <div className="relative inline-block mb-3">
                     <Avatar className="h-16 w-16 rounded-2xl ring-1 ring-slate-100 dark:ring-white/10 group-hover:scale-110 transition-transform">
                         <AvatarImage src={avatarUrl} />
