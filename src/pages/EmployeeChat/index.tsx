@@ -61,7 +61,6 @@ export function EmployeeChat() {
     const clearError = useChatStore((s) => s.clearError);
     const cleanupEmptySession = useChatStore((s) => s.cleanupEmptySession);
     const deleteSession = useChatStore((s) => s.deleteSession);
-    const newSession = useChatStore((s) => s.newSession);
 
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const [streamingTimestamp, setStreamingTimestamp] = useState<number>(0);
@@ -88,15 +87,33 @@ export function EmployeeChat() {
     }, [loadSessions]);
 
     const handleSessionChange = useCallback((key: string) => {
+        console.log('[EmployeeChat] Switching to session:', key);
+        
+        // Switch session in store
+        switchSession(key);
+        
+        // Update URL parameter
         const urlKey = key.includes(':') ? key.split(':').pop()! : key;
         const newParams = new URLSearchParams(searchParams);
         newParams.set('session', urlKey);
         setSearchParams(newParams);
-    }, [searchParams, setSearchParams]);
+    }, [searchParams, setSearchParams, switchSession]);
 
     const handleNewSession = useCallback(() => {
-        newSession();
-    }, [newSession]);
+        // Generate new session key with correct agent prefix
+        const newSessionKey = `agent:${agentId}:session-${Date.now()}`;
+        const urlKey = newSessionKey.split(':').pop()!;
+        
+        console.log('[EmployeeChat] Creating new session:', newSessionKey);
+        
+        // Switch to the new session
+        switchSession(newSessionKey);
+        
+        // Update URL parameter
+        const newParams = new URLSearchParams(searchParams);
+        newParams.set('session', urlKey);
+        setSearchParams(newParams);
+    }, [agentId, switchSession, searchParams, setSearchParams]);
 
     const handleDeleteSession = useCallback(async (key: string) => {
         await deleteSession(key);

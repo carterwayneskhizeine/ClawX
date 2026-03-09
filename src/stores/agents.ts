@@ -172,12 +172,18 @@ export const useAgentsStore = create<AgentsState>((set, get) => ({
     },
 
     deleteAgent: async (agentId) => {
-        set({ loading: true });
+        // Step 0: 乐观更新 - 先从本地列表中移除， immediately update UI
+        const currentAgents = get().agents;
+        const updatedAgents = currentAgents.filter(a => a.id !== agentId);
+        set({ agents: updatedAgents, loading: true });
+        // 触发侧边栏更新
+        dispatchAgentsUpdated();
+
         try {
             // Step 1: Delete agent config via Gateway API
             await invokeIpc('gateway:rpc', 'agents.delete', { agentId });
 
-            // Step 2: Cleanup matching files via Electron IPC (will be implemented next)
+            // Step 2: Cleanup matching files via Electron IPC
             await invokeIpc('agent:cleanupFiles', { agentId }).catch(err =>
                 console.warn('File cleanup failed:', err)
             );
@@ -191,9 +197,19 @@ export const useAgentsStore = create<AgentsState>((set, get) => ({
                 saveAgentDisplayNames(newNames);
             }
 
+            // Step 4: 等待 Gateway 完成删除后再刷新列表（确保同步）
+            await new Promise(r => setTimeout(r, 500));
             await get().fetchAgents();
-            // 触发侧边栏更新事件
+            // 再次触发更新确保所有组件同步
             dispatchAgentsUpdated();
+        } catch (error) {
+            // 如果删除失败，恢复原来的列表
+            console.error('Failed to delete agent:', error);
+            set({ agents: currentAgents });
+            // 重新获取确保状态正确
+            await get().fetchAgents();
+            dispatchAgentsUpdated();
+            throw error;
         } finally {
             set({ loading: false });
         }

@@ -1,9 +1,6 @@
 import { useEffect, useState } from 'react';
 import {
     Plus,
-    MoreVertical,
-    Trash2,
-    Settings2,
     Settings,
     CloudDownload
 } from 'lucide-react';
@@ -24,12 +21,6 @@ import { useAgentsStore, Agent } from '@/stores/agents';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 import { AgentFormDialog } from '@/components/common/AgentFormDialog';
 import { AgentManageDialog } from '@/components/common/AgentManageDialog';
 import { AgentAdvancedConfigDialog } from '@/components/common/AgentAdvancedConfigDialog';
@@ -140,7 +131,6 @@ export function HomeDashboard() {
                         <AgentCard
                             key={agent.id}
                             agent={agent}
-                            onDelete={() => deleteAgent(agent.id)}
                             onClick={() => navigate(`/employee/${agent.id}`)}
                         />
                     ))}
@@ -184,7 +174,7 @@ export function HomeDashboard() {
                                             <Tooltip
                                                 contentStyle={{ backgroundColor: 'hsl(var(--background))', borderRadius: '12px', border: '1px solid hsl(var(--border))', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)' }}
                                                 itemStyle={{ color: 'hsl(var(--foreground))' }}
-                                                formatter={(value: number) => [value.toLocaleString(), '积分']}
+                                                formatter={(value: any) => [Number(value || 0).toLocaleString(), '积分']}
                                             />
                                         </PieChart>
                                     </ResponsiveContainer>
@@ -226,7 +216,7 @@ export function HomeDashboard() {
                                             cursor={{ fill: 'currentColor', opacity: 0.05 }}
                                             contentStyle={{ backgroundColor: 'hsl(var(--background))', borderRadius: '12px', border: '1px solid hsl(var(--border))', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)' }}
                                             itemStyle={{ color: 'hsl(var(--foreground))' }}
-                                            formatter={(value: number) => [value.toLocaleString(), '使用量']}
+                                            formatter={(value: any) => [Number(value || 0).toLocaleString(), '使用量']}
                                         />
                                         <Bar dataKey="usage" fill="#1677ff" radius={[6, 6, 0, 0]} />
                                     </BarChart>
@@ -304,7 +294,7 @@ export function HomeDashboard() {
     );
 }
 
-function AgentCard({ agent, onDelete, onClick }: { agent: Agent; onDelete: () => void; onClick: () => void }) {
+function AgentCard({ agent, onClick }: { agent: Agent; onClick: () => void }) {
     return (
         <Card
             className="group relative overflow-hidden transition-all duration-300 hover:shadow-lg hover:-translate-y-1 border-slate-100 dark:border-white/5 bg-card/50 backdrop-blur-sm cursor-pointer rounded-2xl min-h-[200px] flex flex-col justify-center"
@@ -329,28 +319,7 @@ function AgentCard({ agent, onDelete, onClick }: { agent: Agent; onDelete: () =>
                     {agent.status === 'idle' ? '在线' : '工作中'}
                 </p>
 
-                <div className="absolute top-2 right-2">
-                    <DropdownMenu>
-                        <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                            <Button variant="ghost" size="icon" className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity rounded-full">
-                                <MoreVertical className="h-4 w-4" />
-                            </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                            <DropdownMenuItem className="gap-2">
-                                <Settings2 className="h-4 w-4" />
-                                <span>设置</span>
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                                className="text-destructive focus:text-destructive gap-2"
-                                onClick={(e) => { e.stopPropagation(); onDelete(); }}
-                            >
-                                <Trash2 className="h-4 w-4" />
-                                <span>删除</span>
-                            </DropdownMenuItem>
-                        </DropdownMenuContent>
-                    </DropdownMenu>
-                </div>
+
             </CardContent>
         </Card>
     );
