@@ -55,7 +55,14 @@ export const useGatewayStore = create<GatewayState>((set, get) => ({
 
         // Listen for status changes
         window.electron.ipcRenderer.on('gateway:status-changed', (newStatus) => {
+          const oldStatus = get().status;
           set({ status: newStatus as GatewayStatus });
+
+          // 当 Gateway 从非 running 变为 running 时，触发刷新 agent 列表
+          const newStatusObj = newStatus as GatewayStatus;
+          if (oldStatus?.state !== 'running' && newStatusObj.state === 'running') {
+            window.dispatchEvent(new Event('gateway-ready'));
+          }
         });
 
         // Listen for errors

@@ -68,6 +68,16 @@ export function HomeDashboard() {
 
     useEffect(() => {
         fetchAgents();
+
+        // 监听 Gateway 就绪事件，自动刷新 agent 列表
+        const handleGatewayReady = () => {
+            fetchAgents();
+        };
+        window.addEventListener('gateway-ready', handleGatewayReady);
+
+        return () => {
+            window.removeEventListener('gateway-ready', handleGatewayReady);
+        };
     }, [fetchAgents]);
 
     const filteredAgents = agents.filter(agent =>

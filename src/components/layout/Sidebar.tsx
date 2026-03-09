@@ -172,16 +172,18 @@ export function Sidebar() {
       fetchAgents();
     }
 
-    // 监听 agents-updated 事件，当 agent 被创建/删除时刷新列表
+    // 监听 agent 更新事件和 Gateway 就绪事件
     const handleAgentsUpdated = () => {
       if (uiMode === 'new') {
         fetchAgents();
       }
     };
     window.addEventListener('agents-updated', handleAgentsUpdated);
+    window.addEventListener('gateway-ready', handleAgentsUpdated);
 
     return () => {
       window.removeEventListener('agents-updated', handleAgentsUpdated);
+      window.removeEventListener('gateway-ready', handleAgentsUpdated);
     };
   }, [uiMode, fetchAgents]);
 

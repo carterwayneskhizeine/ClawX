@@ -66,40 +66,12 @@ export const useAgentsStore = create<AgentsState>((set, get) => ({
                 status: 'idle' as const,
             }));
 
-            // 如果 Gateway 没有返回任何 agent，添加默认的 main agent
-            if (mappedAgents.length === 0) {
-                mappedAgents = [{
-                    id: 'main',
-                    name: '通用助手',
-                    workspace: 'D:\\TheClaw\\.openclaw\\workspace-main',
-                    identity: {
-                        name: '通用助手',
-                        emoji: '🤖',
-                        theme: '',
-                        avatarUrl: '',
-                    },
-                    status: 'idle',
-                }];
-            }
-
+            // 不再使用默认 main agent 兜底，等待 Gateway 准备好后自动刷新
             set({ agents: mappedAgents });
         } catch (error) {
             console.error('Failed to fetch agents:', error);
-            // Gateway 连接失败时，也显示默认的 main agent
-            set({
-                agents: [{
-                    id: 'main',
-                    name: '通用助手',
-                    workspace: 'D:\\TheClaw\\.openclaw\\workspace-main',
-                    identity: {
-                        name: '通用助手',
-                        emoji: '🤖',
-                        theme: '',
-                        avatarUrl: '',
-                    },
-                    status: 'offline',
-                }]
-            });
+            // Gateway 连接失败时显示空列表，等待重试
+            set({ agents: [] });
         } finally {
             set({ loading: false });
         }
