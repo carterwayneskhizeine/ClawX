@@ -368,27 +368,33 @@ export function Sidebar() {
 
                 {!sidebarCollapsed && agentsExpanded && (
                   <div className="flex flex-col gap-1 max-h-[40vh] overflow-y-auto pr-1 pl-4 mt-1 animate-in fade-in slide-in-from-top-2 duration-300">
-                    {agents.map((agent) => (
-                      <NavItem
-                        key={agent.id}
-                        to={`/employee/${agent.id}`}
-                        icon={
-                          <div className="relative">
-                            <span className="text-xl shrink-0 group-hover:scale-110 transition-transform">
-                              {agent.identity?.emoji || '🤖'}
-                            </span>
-                            <div
-                              className={cn(
-                                'absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-background',
-                                agent.status === 'idle' ? 'bg-green-500' : 'bg-amber-500'
-                              )}
-                            />
-                          </div>
-                        }
-                        label={agent.identity?.name || agent.name || agent.id}
-                        collapsed={sidebarCollapsed}
-                      />
-                    ))}
+                    {agents.map((agent) => {
+                      const avatarUrl = agent.identity?.avatarUrl || `https://picsum.photos/seed/${agent.id}/200`;
+                      return (
+                        <NavItem
+                          key={agent.id}
+                          to={`/employee/${agent.id}`}
+                          icon={
+                            <div className="relative">
+                              <Avatar className="h-6 w-6 rounded-lg overflow-hidden">
+                                <AvatarImage src={avatarUrl} alt={agent.name} />
+                                <AvatarFallback className="text-sm bg-primary/10">
+                                  {agent.identity?.emoji || '🤖'}
+                                </AvatarFallback>
+                              </Avatar>
+                              <div
+                                className={cn(
+                                  'absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-background',
+                                  agent.status === 'idle' ? 'bg-green-500' : 'bg-amber-500'
+                                )}
+                              />
+                            </div>
+                          }
+                          label={agent.identity?.name || agent.name || agent.id}
+                          collapsed={sidebarCollapsed}
+                        />
+                      );
+                    })}
                   </div>
                 )}
               </div>
