@@ -18,7 +18,7 @@ import { existsSync } from 'fs';
 import { join } from 'path';
 import { exec } from 'child_process';
 import { promisify } from 'util';
-import { getOpenClawConfigDir, getResourcesDir } from './paths';
+import { getOpenClawConfigDir, getOpenClawHomeDir, getResourcesDir } from './paths';
 import { readOpenClawConfig, writeOpenClawConfig } from './channel-config';
 import { logger } from './logger';
 
@@ -76,10 +76,19 @@ async function runNpmInstall(): Promise<void> {
 
   logger.info(`Running "${cmd}" for ${PLUGIN_NAME}...`);
 
+  // Pass HOME/USERPROFILE/OPENCLAW_HOME so npm post-install scripts and any
+  // OpenClaw sub-processes resolve ~ to D:\TheClaw instead of the system home.
+  const homeDir = getOpenClawHomeDir();
   const { stdout, stderr } = await execAsync(cmd, {
     cwd: targetDir,
     timeout: 5 * 60 * 1000, // 5 minutes
     windowsHide: true,
+    env: {
+      ...process.env,
+      HOME: homeDir,
+      USERPROFILE: homeDir,
+      OPENCLAW_HOME: homeDir,
+    },
   });
 
   if (stdout) logger.debug(`npm stdout: ${stdout.slice(0, 500)}`);
@@ -108,6 +117,18 @@ async function ensurePluginConfig(): Promise<void> {
 
   // plugins.entries.memory-lancedb-pro
   if (!config.plugins.entries) config.plugins.entries = {};
+
+  // Migrate tilde dbPath to absolute path so the plugin works regardless of
+  // what HOME resolves to (the gateway sets HOME=D:\TheClaw but CLI tools may
+  // not, causing C:\Users\... to be used instead).
+  const existingEntry = config.plugins.entries[PLUGIN_NAME] as
+    | { config?: { dbPath?: string } }
+    | undefined;
+  if (existingEntry?.config?.dbPath?.startsWith('~')) {
+    existingEntry.config.dbPath = join(getOpenClawConfigDir(), 'memory', 'lancedb-pro');
+    logger.info(`${PLUGIN_NAME} migrated tilde dbPath to absolute path`);
+  }
+
   if (!config.plugins.entries[PLUGIN_NAME]) {
     const SILICONFLOW_API_KEY = 'sk-fpmqnxzbkjzojyaaymapfekdhrnmdspwnrbbyxwlhqywsqog';
     config.plugins.entries[PLUGIN_NAME] = {
