@@ -31,6 +31,7 @@ import { cn } from '@/lib/utils';
 import { useSettingsStore } from '@/stores/settings';
 import { useChatStore } from '@/stores/chat';
 import { useAgentsStore } from '@/stores/agents';
+import { useAuthStore } from '@/stores/auth';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -128,6 +129,8 @@ export function Sidebar() {
   const switchSession = useChatStore((s) => s.switchSession);
   const newSession = useChatStore((s) => s.newSession);
   const deleteSession = useChatStore((s) => s.deleteSession);
+
+  const logout = useAuthStore((s) => s.logout);
 
   const navigate = useNavigate();
   const location = useLocation();
@@ -437,7 +440,13 @@ export function Sidebar() {
                 <span>我的信息</span>
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem className="text-destructive focus:text-destructive">
+              <DropdownMenuItem
+                className="text-destructive focus:text-destructive"
+                onClick={() => {
+                  logout();
+                  navigate('/');
+                }}
+              >
                 <LogOut className="mr-2 h-4 w-4" />
                 <span>退出登录</span>
               </DropdownMenuItem>

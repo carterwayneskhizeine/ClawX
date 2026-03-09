@@ -229,7 +229,10 @@ export function EmployeeChat() {
                                     <Button
                                         variant="default"
                                         size="sm"
-                                        onClick={handleNewSession}
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleNewSession();
+                                        }}
                                         className="h-7 px-2 text-[10px] font-bold"
                                     >
                                         <Plus className="h-3 w-3 mr-1" />
@@ -260,7 +263,10 @@ export function EmployeeChat() {
                                             return (
                                                 <DropdownMenuItem
                                                     key={session.key}
-                                                    onClick={() => handleSessionChange(session.key)}
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        handleSessionChange(session.key);
+                                                    }}
                                                     className={cn(
                                                         "flex flex-col items-start gap-1 py-2 cursor-pointer",
                                                         isCurrent && "bg-accent"
