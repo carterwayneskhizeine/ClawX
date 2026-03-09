@@ -5,6 +5,7 @@
  */
 import { useState, useCallback, useEffect, memo } from 'react';
 import { User, Sparkles, Copy, Check, ChevronDown, ChevronRight, Wrench, FileText, Film, Music, FileArchive, File, X, FolderOpen, ZoomIn, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { createPortal } from 'react-dom';
@@ -71,16 +72,18 @@ export const ChatMessage = memo(function ChatMessage({
       )}
     >
       {/* Avatar */}
-      <div
-        className={cn(
-          'flex h-8 w-8 shrink-0 items-center justify-center rounded-full mt-1',
+      <Avatar className="h-8 w-8 shrink-0 mt-1">
+        <AvatarImage 
+          src={isUser ? 'https://picsum.photos/seed/clawx-user/200' : 'https://picsum.photos/seed/clawx-ai/200'} 
+        />
+        <AvatarFallback className={cn(
           isUser
             ? 'bg-primary text-primary-foreground'
             : 'bg-gradient-to-br from-indigo-500 to-purple-600 text-white',
-        )}
-      >
-        {isUser ? <User className="h-4 w-4" /> : <Sparkles className="h-4 w-4" />}
-      </div>
+        )}>
+          {isUser ? <User className="h-4 w-4" /> : <Sparkles className="h-4 w-4" />}
+        </AvatarFallback>
+      </Avatar>
 
       {/* Content */}
       <div
