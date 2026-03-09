@@ -173,6 +173,85 @@ while (queue.length > 0) {
 echo`   Found ${collected.size} total packages (direct + transitive)`;
 echo`   Skipped ${skippedDevCount} dev-only package references`;
 
+// 4b. Collect dependencies declared in extensions/*/package.json that are NOT
+//     direct deps of openclaw itself (e.g. @larksuiteoapi/node-sdk for feishu).
+//     These packages live in the pnpm virtual store but are not reachable from
+//     openclaw's own virtual store BFS, so we add them explicitly here.
+{
+  const extDir = path.join(OUTPUT, 'extensions');
+  if (fs.existsSync(extDir)) {
+    const PNPM_STORE = path.join(NODE_MODULES, '.pnpm');
+
+    // Resolve a package name from the pnpm virtual store.
+    // pnpm flattens scoped names: @larksuiteoapi/node-sdk -> @larksuiteoapi+node-sdk@ver/
+    function findInPnpmStore(pkgName) {
+      if (!fs.existsSync(PNPM_STORE)) return null;
+      const prefix = pkgName.replace(/\//g, '+');
+      let found = null;
+      try {
+        for (const entry of fs.readdirSync(PNPM_STORE)) {
+          if (entry.startsWith(prefix + '@')) {
+            found = path.join(PNPM_STORE, entry, 'node_modules', pkgName);
+            if (fs.existsSync(found)) break;
+          }
+        }
+      } catch { /* ignore */ }
+      return found;
+    }
+
+    for (const extName of fs.readdirSync(extDir)) {
+      const extPkgJson = path.join(extDir, extName, 'package.json');
+      if (!fs.existsSync(extPkgJson)) continue;
+
+      let extPkg;
+      try { extPkg = JSON.parse(fs.readFileSync(extPkgJson, 'utf8')); } catch { continue; }
+
+      const extDeps = { ...extPkg.dependencies };
+      for (const depName of Object.keys(extDeps)) {
+        if (SKIP_PACKAGES.has(depName) || SKIP_SCOPES.some(s => depName.startsWith(s))) continue;
+        // Check if already collected (from main BFS)
+        const alreadyCollected = [...collected.values()].includes(depName);
+        if (alreadyCollected) continue;
+
+        const storePath = findInPnpmStore(depName);
+        if (!storePath) {
+          echo`   ⚠️  Extension dep not found in pnpm store: ${depName} (required by extensions/${extName})`;
+          continue;
+        }
+
+        let realPath;
+        try { realPath = fs.realpathSync(storePath); } catch { continue; }
+        if (collected.has(realPath)) continue;
+        collected.set(realPath, depName);
+        echo`   + Extension dep: ${depName} (extensions/${extName})`;
+
+        // Also collect transitive deps of this extension dep
+        const depVirtualNM = getVirtualStoreNodeModules(realPath);
+        if (depVirtualNM) {
+          queue.push({ nodeModulesDir: depVirtualNM, skipPkg: depName });
+        }
+      }
+    }
+
+    // Drain any newly added transitive deps
+    while (queue.length > 0) {
+      const { nodeModulesDir, skipPkg } = queue.shift();
+      for (const { name, fullPath } of listPackages(nodeModulesDir)) {
+        if (name === skipPkg) continue;
+        if (SKIP_PACKAGES.has(name) || SKIP_SCOPES.some(s => name.startsWith(s))) continue;
+        let realPath;
+        try { realPath = fs.realpathSync(fullPath); } catch { continue; }
+        if (collected.has(realPath)) continue;
+        collected.set(realPath, name);
+        const depVirtualNM = getVirtualStoreNodeModules(realPath);
+        if (depVirtualNM && depVirtualNM !== nodeModulesDir) {
+          queue.push({ nodeModulesDir: depVirtualNM, skipPkg: name });
+        }
+      }
+    }
+  }
+}
+
 // 5. Copy all collected packages into OUTPUT/node_modules/ (flat structure)
 //
 // IMPORTANT: BFS guarantees direct deps are encountered before transitive deps.
