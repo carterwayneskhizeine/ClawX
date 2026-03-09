@@ -86,34 +86,17 @@ export function EmployeeChat() {
         }
     }, [loadSessions]);
 
+    // URL-only: the sessionKey effect handles store sync
     const handleSessionChange = useCallback((key: string) => {
-        console.log('[EmployeeChat] Switching to session:', key);
-        
-        // Switch session in store
-        switchSession(key);
-        
-        // Update URL parameter
         const urlKey = key.includes(':') ? key.split(':').pop()! : key;
         const newParams = new URLSearchParams(searchParams);
         newParams.set('session', urlKey);
         setSearchParams(newParams);
-    }, [searchParams, setSearchParams, switchSession]);
+    }, [searchParams, setSearchParams]);
 
     const handleNewSession = useCallback(() => {
-        // Generate new session key with correct agent prefix
-        const newSessionKey = `agent:${agentId}:session-${Date.now()}`;
-        const urlKey = newSessionKey.split(':').pop()!;
-        
-        console.log('[EmployeeChat] Creating new session:', newSessionKey);
-        
-        // Switch to the new session
-        switchSession(newSessionKey);
-        
-        // Update URL parameter
-        const newParams = new URLSearchParams(searchParams);
-        newParams.set('session', urlKey);
-        setSearchParams(newParams);
-    }, [agentId, switchSession, searchParams, setSearchParams]);
+        handleSessionChange(`agent:${agentId}:session-${Date.now()}`);
+    }, [agentId, handleSessionChange]);
 
     const handleDeleteSession = useCallback(async (key: string) => {
         await deleteSession(key);
@@ -127,21 +110,13 @@ export function EmployeeChat() {
     // Synchronize chat session with selected agent and URL param
     useEffect(() => {
         if (!agentId || !isGatewayRunning) return;
-
-        // Switch to agent's session based on URL param
-        if (currentSessionKey !== sessionKey) {
-            switchSession(sessionKey);
-        }
-
-        // Initial load
-        void handleLoadSessions().then(() => {
-            void loadHistory(false);
-        });
-
+        switchSession(sessionKey);
+        void loadHistory(false);
         return () => {
             cleanupEmptySession();
         };
-    }, [agentId, isGatewayRunning, sessionKey, currentSessionKey, switchSession, loadHistory, cleanupEmptySession, handleLoadSessions]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [agentId, isGatewayRunning, sessionKey]);
 
     // Auto-scroll logic
     useEffect(() => {
