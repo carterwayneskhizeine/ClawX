@@ -1,10 +1,11 @@
 /**
  * Chat State Store
  * Manages chat messages, sessions, streaming, and thinking state.
- * Communicates with OpenClaw Gateway via gateway:rpc IPC.
+ * Communicates with OpenClaw Gateway via renderer WebSocket RPC.
  */
 import { create } from 'zustand';
-import { invokeIpc } from '@/lib/api-client';
+import { hostApiFetch } from '@/lib/host-api';
+import { useGatewayStore } from './gateway';
 
 // ── Types ────────────────────────────────────────────────────────
 
@@ -86,6 +87,7 @@ interface ChatState {
   // Sessions
   sessions: ChatSession[];
   currentSessionKey: string;
+  currentAgentId: string;
   /** First user message text per session key, used as display label */
   sessionLabels: Record<string, string>;
   /** Last message timestamp (ms) per session key, used for sorting */
@@ -597,10 +599,13 @@ async function loadMissingPreviews(messages: RawMessage[]): Promise<boolean> {
   if (needPreview.length === 0) return false;
 
   try {
-    const thumbnails = await invokeIpc(
-      'media:getThumbnails',
-      needPreview,
-    ) as Record<string, { preview: string | null; fileSize: number }>;
+    const thumbnails = await hostApiFetch<Record<string, { preview: string | null; fileSize: number }>>(
+      '/api/files/thumbnails',
+      {
+        method: 'POST',
+        body: JSON.stringify({ paths: needPreview }),
+      },
+    );
 
     let updated = false;
     for (const msg of messages) {
@@ -649,6 +654,19 @@ function getCanonicalPrefixFromSessions(sessions: ChatSession[]): string | null 
   const canonical = sessions.find((s) => s.key.startsWith('agent:'))?.key;
   if (!canonical) return null;
   const parts = canonical.split(':');
+  if (parts.length < 2) return null;
+  return `${parts[0]}:${parts[1]}`;
+}
+
+function getAgentIdFromSessionKey(sessionKey: string): string {
+  if (!sessionKey.startsWith('agent:')) return 'main';
+  const parts = sessionKey.split(':');
+  return parts[1] || 'main';
+}
+
+function getCanonicalPrefixFromSessionKey(sessionKey: string): string | null {
+  if (!sessionKey.startsWith('agent:')) return null;
+  const parts = sessionKey.split(':');
   if (parts.length < 2) return null;
   return `${parts[0]}:${parts[1]}`;
 }
@@ -919,6 +937,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
   sessions: [],
   currentSessionKey: DEFAULT_SESSION_KEY,
+  currentAgentId: 'main',
   sessionLabels: {},
   sessionLastActivity: {},
 
@@ -929,14 +948,8 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
   loadSessions: async () => {
     try {
-      const result = await invokeIpc(
-        'gateway:rpc',
-        'sessions.list',
-        {}
-      ) as { success: boolean; result?: Record<string, unknown>; error?: string };
-
-      if (result.success && result.result) {
-        const data = result.result;
+      const data = await useGatewayStore.getState().rpc<Record<string, unknown>>('sessions.list', {});
+      if (data) {
         const rawSessions = Array.isArray(data.sessions) ? data.sessions : [];
         const sessions: ChatSession[] = rawSessions.map((s: Record<string, unknown>) => ({
           key: String(s.key || ''),
@@ -966,7 +979,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
           return true;
         });
 
-        const { currentSessionKey } = get();
+        const { currentSessionKey, sessions: localSessions } = get();
         let nextSessionKey = currentSessionKey || DEFAULT_SESSION_KEY;
         if (!nextSessionKey.startsWith('agent:')) {
           const canonicalMatch = canonicalBySuffix.get(nextSessionKey);
@@ -975,9 +988,10 @@ export const useChatStore = create<ChatState>((set, get) => ({
           }
         }
         if (!dedupedSessions.find((s) => s.key === nextSessionKey) && dedupedSessions.length > 0) {
-          // Current session not found in the backend list
-          const isNewEmptySession = get().messages.length === 0;
-          if (!isNewEmptySession) {
+          // Preserve only locally-created pending sessions. On initial boot the
+          // default ghost key (`agent:main:main`) should yield to real history.
+          const hasLocalPendingSession = localSessions.some((session) => session.key === nextSessionKey);
+          if (!hasLocalPendingSession) {
             nextSessionKey = dedupedSessions[0].key;
           }
         }
@@ -989,7 +1003,11 @@ export const useChatStore = create<ChatState>((set, get) => ({
           ]
           : dedupedSessions;
 
-        set({ sessions: sessionsWithCurrent, currentSessionKey: nextSessionKey });
+        set({
+          sessions: sessionsWithCurrent,
+          currentSessionKey: nextSessionKey,
+          currentAgentId: getAgentIdFromSessionKey(nextSessionKey),
+        });
 
         if (currentSessionKey !== nextSessionKey) {
           get().loadHistory();
@@ -1002,13 +1020,11 @@ export const useChatStore = create<ChatState>((set, get) => ({
           void Promise.all(
             sessionsToLabel.map(async (session) => {
               try {
-                const r = await invokeIpc(
-                  'gateway:rpc',
+                const r = await useGatewayStore.getState().rpc<Record<string, unknown>>(
                   'chat.history',
                   { sessionKey: session.key, limit: 1000 },
-                ) as { success: boolean; result?: Record<string, unknown> };
-                if (!r.success || !r.result) return;
-                const msgs = Array.isArray(r.result.messages) ? r.result.messages as RawMessage[] : [];
+                );
+                const msgs = Array.isArray(r.messages) ? r.messages as RawMessage[] : [];
                 const firstUser = msgs.find((m) => m.role === 'user');
                 const lastMsg = msgs[msgs.length - 1];
                 set((s) => {
@@ -1042,6 +1058,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
     const leavingEmpty = !currentSessionKey.endsWith(':main') && messages.length === 0;
     set((s) => ({
       currentSessionKey: key,
+      currentAgentId: getAgentIdFromSessionKey(key),
       messages: [],
       streamingText: '',
       streamingMessage: null,
@@ -1076,12 +1093,15 @@ export const useChatStore = create<ChatState>((set, get) => ({
   deleteSession: async (key: string) => {
     // Soft-delete the session's JSONL transcript on disk.
     // The main process renames <suffix>.jsonl → <suffix>.deleted.jsonl so that
-    // sessions.list and token-usage queries both skip it automatically.
+    // sessions.list skips it automatically.
     try {
-      const result = await invokeIpc('session:delete', key) as {
+      const result = await hostApiFetch<{
         success: boolean;
         error?: string;
-      };
+      }>('/api/sessions/delete', {
+        method: 'POST',
+        body: JSON.stringify({ sessionKey: key }),
+      });
       if (!result.success) {
         console.warn(`[deleteSession] IPC reported failure for ${key}:`, result.error);
       }
@@ -1109,6 +1129,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
         lastUserMessageAt: null,
         pendingToolImages: [],
         currentSessionKey: next?.key ?? DEFAULT_SESSION_KEY,
+        currentAgentId: getAgentIdFromSessionKey(next?.key ?? DEFAULT_SESSION_KEY),
       }));
       if (next) {
         get().loadHistory();
@@ -1129,13 +1150,16 @@ export const useChatStore = create<ChatState>((set, get) => ({
     // NOTE: We intentionally do NOT call sessions.reset on the old session.
     // sessions.reset archives (renames) the session JSONL file, making old
     // conversation history inaccessible when the user switches back to it.
-    const { currentSessionKey, messages } = get();
+    const { currentSessionKey, messages, sessions } = get();
     const leavingEmpty = !currentSessionKey.endsWith(':main') && messages.length === 0;
-    const prefix = getCanonicalPrefixFromSessions(get().sessions) ?? DEFAULT_CANONICAL_PREFIX;
+    const prefix = getCanonicalPrefixFromSessionKey(currentSessionKey)
+      ?? getCanonicalPrefixFromSessions(sessions)
+      ?? DEFAULT_CANONICAL_PREFIX;
     const newKey = `${prefix}:session-${Date.now()}`;
     const newSessionEntry: ChatSession = { key: newKey, displayName: newKey };
     set((s) => ({
       currentSessionKey: newKey,
+      currentAgentId: getAgentIdFromSessionKey(newKey),
       sessions: [
         ...(leavingEmpty ? s.sessions.filter((sess) => sess.key !== currentSessionKey) : s.sessions),
         newSessionEntry,
@@ -1186,14 +1210,11 @@ export const useChatStore = create<ChatState>((set, get) => ({
     if (!quiet) set({ loading: true, error: null });
 
     try {
-      const result = await invokeIpc(
-        'gateway:rpc',
+      const data = await useGatewayStore.getState().rpc<Record<string, unknown>>(
         'chat.history',
-        { sessionKey: currentSessionKey, limit: 200 }
-      ) as { success: boolean; result?: Record<string, unknown>; error?: string };
-
-      if (result.success && result.result) {
-        const data = result.result;
+        { sessionKey: currentSessionKey, limit: 200 },
+      );
+      if (data) {
         const rawMessages = Array.isArray(data.messages) ? data.messages as RawMessage[] : [];
 
         // Before filtering: attach images/files from tool_result messages to the next assistant message
@@ -1426,23 +1447,25 @@ export const useChatStore = create<ChatState>((set, get) => ({
       const CHAT_SEND_TIMEOUT_MS = 120_000;
 
       if (hasMedia) {
-        result = await invokeIpc(
-          'chat:sendWithMedia',
+        result = await hostApiFetch<{ success: boolean; result?: { runId?: string }; error?: string }>(
+          '/api/chat/send-with-media',
           {
-            sessionKey: currentSessionKey,
-            message: trimmed || 'Process the attached file(s).',
-            deliver: false,
-            idempotencyKey,
-            media: attachments.map((a) => ({
-              filePath: a.stagedPath,
-              mimeType: a.mimeType,
-              fileName: a.fileName,
-            })),
+            method: 'POST',
+            body: JSON.stringify({
+              sessionKey: currentSessionKey,
+              message: trimmed || 'Process the attached file(s).',
+              deliver: false,
+              idempotencyKey,
+              media: attachments.map((a) => ({
+                filePath: a.stagedPath,
+                mimeType: a.mimeType,
+                fileName: a.fileName,
+              })),
+            }),
           },
-        ) as { success: boolean; result?: { runId?: string }; error?: string };
+        );
       } else {
-        result = await invokeIpc(
-          'gateway:rpc',
+        const rpcResult = await useGatewayStore.getState().rpc<{ runId?: string }>(
           'chat.send',
           {
             sessionKey: currentSessionKey,
@@ -1451,7 +1474,8 @@ export const useChatStore = create<ChatState>((set, get) => ({
             idempotencyKey,
           },
           CHAT_SEND_TIMEOUT_MS,
-        ) as { success: boolean; result?: { runId?: string }; error?: string };
+        );
+        result = { success: true, result: rpcResult };
       }
 
       console.log(`[sendMessage] RPC result: success=${result.success}, runId=${result.result?.runId || 'none'}`);
@@ -1478,8 +1502,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
     set({ streamingTools: [] });
 
     try {
-      await invokeIpc(
-        'gateway:rpc',
+      await useGatewayStore.getState().rpc(
         'chat.abort',
         { sessionKey: currentSessionKey },
       );

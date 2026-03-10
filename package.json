@@ -1,11 +1,13 @@
 {
     "name": "clawx",
-    "version": "0.1.23",
+    "version": "0.1.24-alpha.9",
     "pnpm": {
         "onlyBuiltDependencies": [
+            "@discordjs/opus",
             "@whiskeysockets/baileys",
             "electron",
             "esbuild",
+            "koffi",
             "node-llama-cpp",
             "protobufjs",
             "sharp"
@@ -42,6 +44,7 @@
         "postversion": "git push && git push --tags"
     },
     "dependencies": {
+        "@wecom/wecom-openclaw-plugin": "^1.0.6",
         "clawhub": "^0.5.0",
         "electron-store": "^11.0.2",
         "electron-updater": "^6.8.3",
@@ -64,6 +67,7 @@
         "@radix-ui/react-tabs": "^1.1.13",
         "@radix-ui/react-toast": "^1.2.15",
         "@radix-ui/react-tooltip": "^1.2.8",
+        "@sliverp/qqbot": "^1.5.4",
         "@soimy/dingtalk": "^3.1.4",
         "@testing-library/jest-dom": "^6.9.1",
         "@testing-library/react": "^16.3.2",
@@ -112,5 +116,5 @@
         "zustand": "^5.0.11",
         "zx": "^8.8.5"
     },
-    "packageManager": "pnpm@10.29.2+sha512.bef43fa759d91fd2da4b319a5a0d13ef7a45bb985a3d7342058470f9d2051a3ba8674e629672654686ef9443ad13a82da2beb9eeb3e0221c87b8154fff9d74b8"
+    "packageManager": "pnpm@10.31.0+sha512.e3927388bfaa8078ceb79b748ffc1e8274e84d75163e67bc22e06c0d3aed43dd153151cbf11d7f8301ff4acb98c68bdc5cadf6989532801ffafe3b3e4a63c268"
 }

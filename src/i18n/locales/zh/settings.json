@@ -13,6 +13,19 @@
   "aiProviders": {
     "title": "AI 模型提供商",
     "description": "配置 AI 模型提供商和 API 密钥",
+    "overview": {
+      "title": "提供商账户",
+      "description": "这里汇总当前已配置的 provider 账户与模型信息。",
+      "noModelSelected": "未选择模型",
+      "multiAccountReady": "支持多账户",
+      "singletonVendor": "单例提供商"
+    },
+    "authModes": {
+      "apiKey": "API 密钥",
+      "oauthDevice": "OAuth 设备登录",
+      "oauthBrowser": "OAuth 浏览器登录",
+      "local": "本地"
+    },
     "sections": {
       "model": "模型配置",
       "fallback": "回退配置"
@@ -37,6 +50,7 @@
       "replaceApiKeyHelp": "如果想保留当前已保存的 API key，这里留空即可。",
       "baseUrl": "基础 URL",
       "modelId": "模型 ID",
+      "protocol": "协议",
       "fallbackModels": "回退模型",
       "fallbackProviders": "跨 Provider 回退",
       "fallbackModelIds": "同 Provider 回退模型 ID",
@@ -59,6 +73,10 @@
       "setDefault": "设为默认",
       "editKey": "编辑 API 密钥",
       "delete": "删除提供商"
+    },
+    "protocols": {
+      "openai": "OpenAI 兼容",
+      "anthropic": "Anthropic 兼容"
     },
     "toast": {
       "added": "提供商添加成功",
@@ -85,6 +103,7 @@
       "cancel": "取消",
       "codeCopied": "代码已复制到剪贴板",
       "authFailed": "认证失败",
+      "browserFlowUnavailable": "该提供商的浏览器 OAuth 登录链路暂未接通。",
       "tryAgain": "重试",
       "approveLogin": "确认登录",
       "step1": "复制下方的授权码。",
@@ -195,6 +214,19 @@
     "cliPowershell": "PowerShell 命令。",
     "cmdUnavailable": "命令不可用",
     "cmdCopied": "CLI 命令已复制",
+    "wsDiagnostic": "WS 诊断模式",
+    "wsDiagnosticDesc": "临时启用 WS/HTTP 回退链，用于网关 RPC 调试。",
+    "wsDiagnosticEnabled": "已启用 WS 诊断模式",
+    "wsDiagnosticDisabled": "已关闭 WS 诊断模式",
+    "telemetryViewer": "埋点查看器",
+    "telemetryViewerDesc": "仅本地 UX/性能埋点，显示最近 200 条。",
+    "telemetryAggregated": "事件聚合",
+    "telemetryTotal": "总数",
+    "telemetryErrors": "错误",
+    "telemetrySlow": "慢请求（>=800ms）",
+    "telemetryEmpty": "暂无埋点",
+    "telemetryCopied": "埋点已复制",
+    "telemetryCleared": "埋点已清空",
     "installCmd": "安装 \"openclaw\" 命令",
     "installCmdDesc": "安装 ~/.local/bin/openclaw（无需管理员权限）",
     "installTitle": "安装 OpenClaw 命令",

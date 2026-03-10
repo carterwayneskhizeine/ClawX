@@ -4,10 +4,14 @@
         "newChat": "New Chat",
         "cronTasks": "Cron Tasks",
         "skills": "Skills",
+        "agents": "Agents",
         "channels": "Channels",
         "dashboard": "Dashboard",
         "settings": "Settings",
-        "devConsole": "Developer Console"
+        "devConsole": "Developer Console",
+        "models": "Models",
+        "deleteSessionConfirm": "Are you sure you want to delete session \"{{label}}\"?",
+        "openClawPage": "OpenClaw Page"
     },
     "actions": {
         "save": "Save",
@@ -28,7 +32,10 @@
         "back": "Back",
         "next": "Next",
         "skip": "Skip",
-        "restart": "Restart"
+        "restart": "Restart",
+        "show": "Show",
+        "hide": "Hide",
+        "clear": "Clear"
     },
     "status": {
         "running": "Running",

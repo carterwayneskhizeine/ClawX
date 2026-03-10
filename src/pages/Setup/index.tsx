@@ -29,9 +29,12 @@ import { cn } from '@/lib/utils';
 import { useGatewayStore } from '@/stores/gateway';
 import { useSettingsStore } from '@/stores/settings';
 import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import { SUPPORTED_LANGUAGES } from '@/i18n';
 import { toast } from 'sonner';
 import { invokeIpc } from '@/lib/api-client';
+import { hostApiFetch } from '@/lib/host-api';
+import { subscribeHostEvent } from '@/lib/host-events';
 interface SetupStep {
   id: string;
   title: string;
@@ -46,31 +49,31 @@ const STEP = {
   COMPLETE: 4,
 } as const;
 
-const steps: SetupStep[] = [
+const getSteps = (t: TFunction): SetupStep[] => [
   {
     id: 'welcome',
-    title: 'Welcome to ClawX',
-    description: 'Your AI assistant is ready to be configured',
+    title: t('steps.welcome.title'),
+    description: t('steps.welcome.description'),
   },
   {
     id: 'runtime',
-    title: 'Environment Check',
-    description: 'Verifying system requirements',
+    title: t('steps.runtime.title'),
+    description: t('steps.runtime.description'),
   },
   {
     id: 'provider',
-    title: 'AI Provider',
-    description: 'Configure your AI service',
+    title: t('steps.provider.title'),
+    description: t('steps.provider.description'),
   },
   {
     id: 'installing',
-    title: 'Setting Up',
-    description: 'Installing essential components',
+    title: t('steps.installing.title'),
+    description: t('steps.installing.description'),
   },
   {
     id: 'complete',
-    title: 'All Set!',
-    description: 'ClawX is ready to use',
+    title: t('steps.complete.title'),
+    description: t('steps.complete.description'),
   },
 ];
 
@@ -81,16 +84,18 @@ interface DefaultSkill {
   description: string;
 }
 
-const defaultSkills: DefaultSkill[] = [
-  { id: 'opencode', name: 'OpenCode', description: 'AI coding assistant backend' },
-  { id: 'python-env', name: 'Python Environment', description: 'Python runtime for skills' },
-  { id: 'code-assist', name: 'Code Assist', description: 'Code analysis and suggestions' },
-  { id: 'file-tools', name: 'File Tools', description: 'File operations and management' },
-  { id: 'terminal', name: 'Terminal', description: 'Shell command execution' },
+const getDefaultSkills = (t: TFunction): DefaultSkill[] => [
+  { id: 'opencode', name: t('defaultSkills.opencode.name'), description: t('defaultSkills.opencode.description') },
+  { id: 'python-env', name: t('defaultSkills.python-env.name'), description: t('defaultSkills.python-env.description') },
+  { id: 'code-assist', name: t('defaultSkills.code-assist.name'), description: t('defaultSkills.code-assist.description') },
+  { id: 'file-tools', name: t('defaultSkills.file-tools.name'), description: t('defaultSkills.file-tools.description') },
+  { id: 'terminal', name: t('defaultSkills.terminal.name'), description: t('defaultSkills.terminal.description') },
 ];
 
 import {
   SETUP_PROVIDERS,
+  type ProviderAccount,
+  type ProviderType,
   type ProviderTypeInfo,
   getProviderIconUrl,
   resolveProviderApiKeyForSave,
@@ -98,6 +103,12 @@ import {
   shouldInvertInDark,
   shouldShowProviderModelId,
 } from '@/lib/providers';
+import {
+  buildProviderAccountId,
+  fetchProviderSnapshot,
+  hasConfiguredCredentials,
+  pickPreferredAccount,
+} from '@/lib/provider-accounts';
 import clawxIcon from '@/assets/logo.svg';
 
 // Use the shared provider registry for setup providers
@@ -120,6 +131,7 @@ export function Setup() {
   // Runtime check status
   const [runtimeChecksPassed, setRuntimeChecksPassed] = useState(false);
 
+  const steps = getSteps(t);
   const safeStepIndex = Number.isInteger(currentStep)
     ? Math.min(Math.max(currentStep, STEP.WELCOME), steps.length - 1)
     : STEP.WELCOME;
@@ -146,18 +158,6 @@ export function Setup() {
         return true;
     }
   }, [safeStepIndex, providerConfigured, runtimeChecksPassed]);
-
-  // Keep setup flow linear: advance to provider step automatically
-  // once runtime checks become healthy.
-  useEffect(() => {
-    if (safeStepIndex !== STEP.RUNTIME || !runtimeChecksPassed) {
-      return;
-    }
-    const timer = setTimeout(() => {
-      setCurrentStep(STEP.PROVIDER);
-    }, 600);
-    return () => clearTimeout(timer);
-  }, [runtimeChecksPassed, safeStepIndex]);
 
   const handleNext = async () => {
     if (isLastStep) {
@@ -257,7 +257,7 @@ export function Setup() {
               )}
               {safeStepIndex === STEP.INSTALLING && (
                 <InstallingContent
-                  skills={defaultSkills}
+                  skills={getDefaultSkills(t)}
                   onComplete={handleInstallationComplete}
                   onSkip={() => setCurrentStep((i) => i + 1)}
                 />
@@ -539,8 +539,8 @@ function RuntimeContent({ onStatusChange }: RuntimeContentProps) {
 
   const handleShowLogs = async () => {
     try {
-      const logs = await invokeIpc('log:readFile', 100) as string;
-      setLogContent(logs);
+      const logs = await hostApiFetch<{ content: string }>('/api/logs?tailLines=100');
+      setLogContent(logs.content);
       setShowLogs(true);
     } catch {
       setLogContent('(Failed to load logs)');
@@ -550,7 +550,7 @@ function RuntimeContent({ onStatusChange }: RuntimeContentProps) {
 
   const handleOpenLogDir = async () => {
     try {
-      const logDir = await invokeIpc('log:getDir') as string;
+      const { dir: logDir } = await hostApiFetch<{ dir: string | null }>('/api/logs/dir');
       if (logDir) {
         await invokeIpc('shell:showItemInFolder', logDir);
       }
@@ -636,10 +636,10 @@ function RuntimeContent({ onStatusChange }: RuntimeContentProps) {
         </div>
         <div className="grid grid-cols-[1fr_auto] items-center gap-4 p-3 rounded-lg bg-muted/50">
           <div className="flex items-center gap-2 text-left">
-            <span>Gateway Service</span>
+            <span>{t('runtime.gateway')}</span>
             {checks.gateway.status === 'error' && (
               <Button variant="outline" size="sm" onClick={handleStartGateway}>
-                Start Gateway
+                {t('runtime.startGateway')}
               </Button>
             )}
           </div>
@@ -667,19 +667,19 @@ function RuntimeContent({ onStatusChange }: RuntimeContentProps) {
       {showLogs && (
         <div className="mt-4 p-4 rounded-lg bg-black/40 border border-border">
           <div className="flex items-center justify-between mb-2">
-            <p className="font-medium text-foreground text-sm">Application Logs</p>
+            <p className="font-medium text-foreground text-sm">{t('runtime.logs.title')}</p>
             <div className="flex gap-2">
               <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={handleOpenLogDir}>
                 <ExternalLink className="h-3 w-3 mr-1" />
-                Open Log Folder
+                {t('runtime.logs.openFolder')}
               </Button>
               <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => setShowLogs(false)}>
-                Close
+                {t('runtime.logs.close')}
               </Button>
             </div>
           </div>
           <pre className="text-xs text-slate-300 bg-black/50 p-3 rounded max-h-60 overflow-auto whitespace-pre-wrap font-mono">
-            {logContent || '(No logs available yet)'}
+            {logContent || t('runtime.logs.noLogs')}
           </pre>
         </div>
       )}
@@ -709,7 +709,7 @@ function ProviderContent({
   const [showKey, setShowKey] = useState(false);
   const [validating, setValidating] = useState(false);
   const [keyValid, setKeyValid] = useState<boolean | null>(null);
-  const [selectedProviderConfigId, setSelectedProviderConfigId] = useState<string | null>(null);
+  const [selectedAccountId, setSelectedAccountId] = useState<string | null>(null);
   const [baseUrl, setBaseUrl] = useState('');
   const [modelId, setModelId] = useState('');
   const [providerMenuOpen, setProviderMenuOpen] = useState(false);
@@ -725,6 +725,7 @@ function ProviderContent({
     expiresIn: number;
   } | null>(null);
   const [oauthError, setOauthError] = useState<string | null>(null);
+  const pendingOAuthRef = useRef<{ accountId: string; label: string } | null>(null);
 
   // Manage OAuth events
   useEffect(() => {
@@ -733,19 +734,27 @@ function ProviderContent({
       setOauthError(null);
     };
 
-    const handleSuccess = async () => {
+    const handleSuccess = async (data: unknown) => {
       setOauthFlowing(false);
       setOauthData(null);
       setKeyValid(true);
 
-      if (selectedProvider) {
+      const payload = (data as { accountId?: string } | undefined) || undefined;
+      const accountId = payload?.accountId || pendingOAuthRef.current?.accountId;
+
+      if (accountId) {
         try {
-          await invokeIpc('provider:setDefault', selectedProvider);
+          await hostApiFetch('/api/provider-accounts/default', {
+            method: 'PUT',
+            body: JSON.stringify({ accountId }),
+          });
+          setSelectedAccountId(accountId);
         } catch (error) {
-          console.error('Failed to set default provider:', error);
+          console.error('Failed to set default provider account:', error);
         }
       }
 
+      pendingOAuthRef.current = null;
       onConfiguredChange(true);
       toast.success(t('provider.valid'));
     };
@@ -753,34 +762,31 @@ function ProviderContent({
     const handleError = (data: unknown) => {
       setOauthError((data as { message: string }).message);
       setOauthData(null);
+      pendingOAuthRef.current = null;
     };
 
-    window.electron.ipcRenderer.on('oauth:code', handleCode);
-    window.electron.ipcRenderer.on('oauth:success', handleSuccess);
-    window.electron.ipcRenderer.on('oauth:error', handleError);
+    const offCode = subscribeHostEvent('oauth:code', handleCode);
+    const offSuccess = subscribeHostEvent('oauth:success', handleSuccess);
+    const offError = subscribeHostEvent('oauth:error', handleError);
 
     return () => {
-      // Clean up manually if the API provides removeListener, though `on` in preloads might not return an unsub.
-      // Easiest is to just let it be, or if they have `off`:
-      if (typeof window.electron.ipcRenderer.off === 'function') {
-        window.electron.ipcRenderer.off('oauth:code', handleCode);
-        window.electron.ipcRenderer.off('oauth:success', handleSuccess);
-        window.electron.ipcRenderer.off('oauth:error', handleError);
-      }
+      offCode();
+      offSuccess();
+      offError();
     };
-  }, [onConfiguredChange, t, selectedProvider]);
+  }, [onConfiguredChange, t]);
 
   const handleStartOAuth = async () => {
     if (!selectedProvider) return;
 
     try {
-      const list = await invokeIpc('provider:list') as Array<{ type: string }>;
-      const existingTypes = new Set(list.map(l => l.type));
-      if (selectedProvider === 'minimax-portal' && existingTypes.has('minimax-portal-cn')) {
+      const snapshot = await fetchProviderSnapshot();
+      const existingVendorIds = new Set(snapshot.accounts.map((account) => account.vendorId));
+      if (selectedProvider === 'minimax-portal' && existingVendorIds.has('minimax-portal-cn')) {
         toast.error(t('settings:aiProviders.toast.minimaxConflict'));
         return;
       }
-      if (selectedProvider === 'minimax-portal-cn' && existingTypes.has('minimax-portal')) {
+      if (selectedProvider === 'minimax-portal-cn' && existingVendorIds.has('minimax-portal')) {
         toast.error(t('settings:aiProviders.toast.minimaxConflict'));
         return;
       }
@@ -793,10 +799,22 @@ function ProviderContent({
     setOauthError(null);
 
     try {
-      await invokeIpc('provider:requestOAuth', selectedProvider);
+      const snapshot = await fetchProviderSnapshot();
+      const accountId = buildProviderAccountId(
+        selectedProvider as ProviderType,
+        selectedAccountId,
+        snapshot.vendors,
+      );
+      const label = selectedProviderData?.name || selectedProvider;
+      pendingOAuthRef.current = { accountId, label };
+      await hostApiFetch('/api/providers/oauth/start', {
+        method: 'POST',
+        body: JSON.stringify({ provider: selectedProvider, accountId, label }),
+      });
     } catch (e) {
       setOauthError(String(e));
       setOauthFlowing(false);
+      pendingOAuthRef.current = null;
     }
   };
 
@@ -804,7 +822,8 @@ function ProviderContent({
     setOauthFlowing(false);
     setOauthData(null);
     setOauthError(null);
-    await invokeIpc('provider:cancelOAuth');
+    pendingOAuthRef.current = null;
+    await hostApiFetch('/api/providers/oauth/cancel', { method: 'POST' });
   };
 
   // On mount, try to restore previously configured provider
@@ -812,26 +831,28 @@ function ProviderContent({
     let cancelled = false;
     (async () => {
       try {
-        const list = await invokeIpc('provider:list') as Array<{ id: string; type: string; hasKey: boolean }>;
-        const defaultId = await invokeIpc('provider:getDefault') as string | null;
+        const snapshot = await fetchProviderSnapshot();
+        const statusMap = new Map(snapshot.statuses.map((status) => [status.id, status]));
         const setupProviderTypes = new Set<string>(providers.map((p) => p.id));
-        const setupCandidates = list.filter((p) => setupProviderTypes.has(p.type));
+        const setupCandidates = snapshot.accounts.filter((account) => setupProviderTypes.has(account.vendorId));
         const preferred =
-          (defaultId && setupCandidates.find((p) => p.id === defaultId))
-          || setupCandidates.find((p) => p.hasKey)
+          (snapshot.defaultAccountId
+            && setupCandidates.find((account) => account.id === snapshot.defaultAccountId))
+          || setupCandidates.find((account) => hasConfiguredCredentials(account, statusMap.get(account.id)))
           || setupCandidates[0];
         if (preferred && !cancelled) {
-          onSelectProvider(preferred.type);
-          setSelectedProviderConfigId(preferred.id);
-          const typeInfo = providers.find((p) => p.id === preferred.type);
+          onSelectProvider(preferred.vendorId);
+          setSelectedAccountId(preferred.id);
+          const typeInfo = providers.find((p) => p.id === preferred.vendorId);
           const requiresKey = typeInfo?.requiresApiKey ?? false;
-          onConfiguredChange(!requiresKey || preferred.hasKey);
-          const storedKey = await invokeIpc('provider:getApiKey', preferred.id) as string | null;
-          if (storedKey) {
-            onApiKeyChange(storedKey);
-          }
+          onConfiguredChange(!requiresKey || hasConfiguredCredentials(preferred, statusMap.get(preferred.id)));
+          const storedKey = (await hostApiFetch<{ apiKey: string | null }>(
+            `/api/providers/${encodeURIComponent(preferred.id)}/api-key`,
+          )).apiKey;
+          onApiKeyChange(storedKey || '');
         } else if (!cancelled) {
           onConfiguredChange(false);
+          onApiKeyChange('');
         }
       } catch (error) {
         if (!cancelled) {
@@ -848,25 +869,25 @@ function ProviderContent({
     (async () => {
       if (!selectedProvider) return;
       try {
-        const list = await invokeIpc('provider:list') as Array<{ id: string; type: string; hasKey: boolean }>;
-        const defaultId = await invokeIpc('provider:getDefault') as string | null;
-        const sameType = list.filter((p) => p.type === selectedProvider);
-        const preferredInstance =
-          (defaultId && sameType.find((p) => p.id === defaultId))
-          || sameType.find((p) => p.hasKey)
-          || sameType[0];
-        const providerIdForLoad = preferredInstance?.id || selectedProvider;
-        setSelectedProviderConfigId(providerIdForLoad);
+        const snapshot = await fetchProviderSnapshot();
+        const statusMap = new Map(snapshot.statuses.map((status) => [status.id, status]));
+        const preferredAccount = pickPreferredAccount(
+          snapshot.accounts,
+          snapshot.defaultAccountId,
+          selectedProvider,
+          statusMap,
+        );
+        const accountIdForLoad = preferredAccount?.id || selectedProvider;
+        setSelectedAccountId(preferredAccount?.id || null);
 
-        const savedProvider = await invokeIpc(
-          'provider:get',
-          providerIdForLoad
-        ) as { baseUrl?: string; model?: string } | null;
-        const storedKey = await invokeIpc('provider:getApiKey', providerIdForLoad) as string | null;
+        const savedProvider = await hostApiFetch<{ baseUrl?: string; model?: string } | null>(
+          `/api/providers/${encodeURIComponent(accountIdForLoad)}`,
+        );
+        const storedKey = (await hostApiFetch<{ apiKey: string | null }>(
+          `/api/providers/${encodeURIComponent(accountIdForLoad)}/api-key`,
+        )).apiKey;
         if (!cancelled) {
-          if (storedKey) {
-            onApiKeyChange(storedKey);
-          }
+          onApiKeyChange(storedKey || '');
 
           const info = providers.find((p) => p.id === selectedProvider);
           setBaseUrl(savedProvider?.baseUrl || info?.defaultBaseUrl || '');
@@ -919,13 +940,13 @@ function ProviderContent({
     if (!selectedProvider) return;
 
     try {
-      const list = await invokeIpc('provider:list') as Array<{ type: string }>;
-      const existingTypes = new Set(list.map(l => l.type));
-      if (selectedProvider === 'minimax-portal' && existingTypes.has('minimax-portal-cn')) {
+      const snapshot = await fetchProviderSnapshot();
+      const existingVendorIds = new Set(snapshot.accounts.map((account) => account.vendorId));
+      if (selectedProvider === 'minimax-portal' && existingVendorIds.has('minimax-portal-cn')) {
         toast.error(t('settings:aiProviders.toast.minimaxConflict'));
         return;
       }
-      if (selectedProvider === 'minimax-portal-cn' && existingTypes.has('minimax-portal')) {
+      if (selectedProvider === 'minimax-portal-cn' && existingVendorIds.has('minimax-portal')) {
         toast.error(t('settings:aiProviders.toast.minimaxConflict'));
         return;
       }
@@ -942,7 +963,7 @@ function ProviderContent({
       if (isApiKeyRequired && apiKey) {
         const result = await invokeIpc(
           'provider:validateKey',
-          selectedProviderConfigId || selectedProvider,
+          selectedAccountId || selectedProvider,
           apiKey,
           { baseUrl: baseUrl.trim() || undefined }
         ) as { valid: boolean; error?: string };
@@ -963,46 +984,70 @@ function ProviderContent({
         modelId,
         devModeUnlocked
       );
-
-      const providerIdForSave =
-        selectedProvider === 'custom'
-          ? (selectedProviderConfigId?.startsWith('custom-')
-            ? selectedProviderConfigId
-            : `custom-${crypto.randomUUID()}`)
-          : selectedProvider;
+      const snapshot = await fetchProviderSnapshot();
+      const accountIdForSave = buildProviderAccountId(
+        selectedProvider as ProviderType,
+        selectedAccountId,
+        snapshot.vendors,
+      );
 
       const effectiveApiKey = resolveProviderApiKeyForSave(selectedProvider, apiKey);
+      const accountPayload: ProviderAccount = {
+        id: accountIdForSave,
+        vendorId: selectedProvider as ProviderType,
+        label: selectedProvider === 'custom'
+          ? t('settings:aiProviders.custom')
+          : (selectedProviderData?.name || selectedProvider),
+        authMode: selectedProvider === 'ollama'
+          ? 'local'
+          : 'api_key',
+        baseUrl: baseUrl.trim() || undefined,
+        model: effectiveModelId,
+        enabled: true,
+        isDefault: false,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
 
-      // Save provider config + API key, then set as default
-      const saveResult = await invokeIpc(
-        'provider:save',
-        {
-          id: providerIdForSave,
-          name: selectedProvider === 'custom' ? t('settings:aiProviders.custom') : (selectedProviderData?.name || selectedProvider),
-          type: selectedProvider,
-          baseUrl: baseUrl.trim() || undefined,
-          model: effectiveModelId,
-          enabled: true,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        },
-        effectiveApiKey
-      ) as { success: boolean; error?: string };
+      const saveResult = selectedAccountId
+        ? await hostApiFetch<{ success: boolean; error?: string }>(
+          `/api/provider-accounts/${encodeURIComponent(accountIdForSave)}`,
+          {
+            method: 'PUT',
+            body: JSON.stringify({
+              updates: {
+                label: accountPayload.label,
+                authMode: accountPayload.authMode,
+                baseUrl: accountPayload.baseUrl,
+                model: accountPayload.model,
+                enabled: accountPayload.enabled,
+              },
+              apiKey: effectiveApiKey,
+            }),
+          },
+        )
+        : await hostApiFetch<{ success: boolean; error?: string }>('/api/provider-accounts', {
+          method: 'POST',
+          body: JSON.stringify({ account: accountPayload, apiKey: effectiveApiKey }),
+        });
 
       if (!saveResult.success) {
         throw new Error(saveResult.error || 'Failed to save provider config');
       }
 
-      const defaultResult = await invokeIpc(
-        'provider:setDefault',
-        providerIdForSave
-      ) as { success: boolean; error?: string };
+      const defaultResult = await hostApiFetch<{ success: boolean; error?: string }>(
+        '/api/provider-accounts/default',
+        {
+          method: 'PUT',
+          body: JSON.stringify({ accountId: accountIdForSave }),
+        },
+      );
 
       if (!defaultResult.success) {
         throw new Error(defaultResult.error || 'Failed to set default provider');
       }
 
-      setSelectedProviderConfigId(providerIdForSave);
+      setSelectedAccountId(accountIdForSave);
       onConfiguredChange(true);
       toast.success(t('provider.valid'));
     } catch (error) {
@@ -1024,7 +1069,7 @@ function ProviderContent({
 
   const handleSelectProvider = (providerId: string) => {
     onSelectProvider(providerId);
-    setSelectedProviderConfigId(null);
+    setSelectedAccountId(null);
     onConfiguredChange(false);
     onApiKeyChange('');
     setKeyValid(null);
@@ -1531,9 +1576,9 @@ function CompleteContent({ selectedProvider, installedSkills }: CompleteContentP
   const gatewayStatus = useGatewayStore((state) => state.status);
 
   const providerData = providers.find((p) => p.id === selectedProvider);
-  const installedSkillNames = defaultSkills
-    .filter((s) => installedSkills.includes(s.id))
-    .map((s) => s.name)
+  const installedSkillNames = getDefaultSkills(t)
+    .filter((s: DefaultSkill) => installedSkills.includes(s.id))
+    .map((s: DefaultSkill) => s.name)
     .join(', ');
 
   return (

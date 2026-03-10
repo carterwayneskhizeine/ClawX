@@ -8,11 +8,17 @@ import {
   registerTransportInvoker,
   unregisterTransportInvoker,
   clearTransportBackoff,
+  getApiClientConfig,
+  applyGatewayTransportPreference,
+  createGatewayHttpTransportInvoker,
+  getGatewayWsDiagnosticEnabled,
+  setGatewayWsDiagnosticEnabled,
 } from '@/lib/api-client';
 
 describe('api-client', () => {
   beforeEach(() => {
     vi.resetAllMocks();
+    window.localStorage.removeItem('clawx:gateway-ws-diagnostic');
     configureApiClient({
       enabled: { ws: false, http: false },
       rules: [{ matcher: /.*/, order: ['ipc'] }],
@@ -60,6 +66,16 @@ describe('api-client', () => {
   it('returns user-facing message for permission error', () => {
     const msg = toUserMessage(new AppError('PERMISSION', 'forbidden'));
     expect(msg).toContain('Permission denied');
+  });
+
+  it('returns user-facing message for auth invalid error', () => {
+    const msg = toUserMessage(new AppError('AUTH_INVALID', 'Invalid Authentication'));
+    expect(msg).toContain('Authentication failed');
+  });
+
+  it('returns user-facing message for channel unavailable error', () => {
+    const msg = toUserMessage(new AppError('CHANNEL_UNAVAILABLE', 'Invalid IPC channel'));
+    expect(msg).toContain('Service channel unavailable');
   });
 
   it('falls back to legacy channel when unified route is unsupported', async () => {
@@ -149,5 +165,83 @@ describe('api-client', () => {
 
     expect(wsInvoker).toHaveBeenCalledTimes(2);
     expect(invoke).toHaveBeenCalledTimes(2);
+  });
+
+  it('defaults transport preference to ipc-only', () => {
+    applyGatewayTransportPreference();
+    const config = getApiClientConfig();
+    expect(config.enabled.ws).toBe(false);
+    expect(config.enabled.http).toBe(false);
+    expect(config.rules[0]).toEqual({ matcher: /^gateway:rpc$/, order: ['ipc'] });
+  });
+
+  it('enables ws->http->ipc order when ws diagnostic is on', () => {
+    setGatewayWsDiagnosticEnabled(true);
+    expect(getGatewayWsDiagnosticEnabled()).toBe(true);
+
+    const config = getApiClientConfig();
+    expect(config.enabled.ws).toBe(true);
+    expect(config.enabled.http).toBe(true);
+    expect(config.rules[0]).toEqual({ matcher: /^gateway:rpc$/, order: ['ws', 'http', 'ipc'] });
+  });
+
+  it('parses gateway:httpProxy unified envelope response', async () => {
+    const invoke = vi.mocked(window.electron.ipcRenderer.invoke);
+    invoke.mockResolvedValueOnce({
+      ok: true,
+      data: {
+        status: 200,
+        ok: true,
+        json: { type: 'res', ok: true, payload: { rows: [1, 2] } },
+      },
+    });
+
+    const invoker = createGatewayHttpTransportInvoker();
+    const result = await invoker<{ success: boolean; result: { rows: number[] } }>(
+      'gateway:rpc',
+      ['chat.history', { sessionKey: 's1' }],
+    );
+
+    expect(result.success).toBe(true);
+    expect(result.result.rows).toEqual([1, 2]);
+    expect(invoke).toHaveBeenCalledWith(
+      'gateway:httpProxy',
+      expect.objectContaining({
+        path: '/rpc',
+        method: 'POST',
+      }),
+    );
+  });
+
+  it('throws meaningful error when gateway:httpProxy unified envelope fails', async () => {
+    const invoke = vi.mocked(window.electron.ipcRenderer.invoke);
+    invoke.mockResolvedValueOnce({
+      ok: false,
+      error: { message: 'proxy unavailable' },
+    });
+
+    const invoker = createGatewayHttpTransportInvoker();
+    await expect(invoker('gateway:rpc', ['chat.history', {}])).rejects.toThrow('proxy unavailable');
+  });
+
+  it('normalizes raw gateway:httpProxy payload into ipc-style envelope', async () => {
+    const invoke = vi.mocked(window.electron.ipcRenderer.invoke);
+    invoke.mockResolvedValueOnce({
+      ok: true,
+      data: {
+        status: 200,
+        ok: true,
+        json: { channels: [{ id: 'telegram-default' }] },
+      },
+    });
+
+    const invoker = createGatewayHttpTransportInvoker();
+    const result = await invoker<{ success: boolean; result: { channels: Array<{ id: string }> } }>(
+      'gateway:rpc',
+      ['channels.status', { probe: false }],
+    );
+
+    expect(result.success).toBe(true);
+    expect(result.result.channels[0].id).toBe('telegram-default');
   });
 });

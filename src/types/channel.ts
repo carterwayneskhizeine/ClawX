@@ -13,12 +13,14 @@ export type ChannelType =
   | 'discord'
   | 'signal'
   | 'feishu'
+  | 'wecom'
   | 'imessage'
   | 'matrix'
   | 'line'
   | 'msteams'
   | 'googlechat'
-  | 'mattermost';
+  | 'mattermost'
+  | 'qqbot';
 
 /**
  * Channel connection status
@@ -84,12 +86,14 @@ export const CHANNEL_ICONS: Record<ChannelType, string> = {
   discord: '🎮',
   signal: '🔒',
   feishu: '🐦',
+  wecom: '💼',
   imessage: '💬',
   matrix: '🔗',
   line: '🟢',
   msteams: '👔',
   googlechat: '💭',
   mattermost: '💠',
+  qqbot: '🐧',
 };
 
 /**
@@ -102,18 +106,50 @@ export const CHANNEL_NAMES: Record<ChannelType, string> = {
   discord: 'Discord',
   signal: 'Signal',
   feishu: 'Feishu / Lark',
+  wecom: 'WeCom',
   imessage: 'iMessage',
   matrix: 'Matrix',
   line: 'LINE',
   msteams: 'Microsoft Teams',
   googlechat: 'Google Chat',
   mattermost: 'Mattermost',
+  qqbot: 'QQ Bot',
 };
 
 /**
  * Channel metadata with configuration information
  */
 export const CHANNEL_META: Record<ChannelType, ChannelMeta> = {
+  qqbot: {
+    id: 'qqbot',
+    name: 'QQ Bot',
+    icon: '🐧',
+    description: 'channels:meta.qqbot.description',
+    connectionType: 'token',
+    docsUrl: 'channels:meta.qqbot.docsUrl',
+    configFields: [
+      {
+        key: 'appId',
+        label: 'channels:meta.qqbot.fields.appId.label',
+        type: 'text',
+        placeholder: 'channels:meta.qqbot.fields.appId.placeholder',
+        required: true,
+      },
+      {
+        key: 'clientSecret',
+        label: 'channels:meta.qqbot.fields.clientSecret.label',
+        type: 'password',
+        placeholder: 'channels:meta.qqbot.fields.clientSecret.placeholder',
+        required: true,
+      },
+    ],
+    instructions: [
+      'channels:meta.qqbot.instructions.0',
+      'channels:meta.qqbot.instructions.1',
+      'channels:meta.qqbot.instructions.2',
+    ],
+    isPlugin: true,
+  },
   dingtalk: {
     id: 'dingtalk',
     name: 'DingTalk',
@@ -163,6 +199,36 @@ export const CHANNEL_META: Record<ChannelType, ChannelMeta> = {
       'channels:meta.dingtalk.instructions.1',
       'channels:meta.dingtalk.instructions.2',
       'channels:meta.dingtalk.instructions.3',
+    ],
+    isPlugin: true,
+  },
+  wecom: {
+    id: 'wecom',
+    name: 'WeCom',
+    icon: '💼',
+    description: 'channels:meta.wecom.description',
+    connectionType: 'token',
+    docsUrl: 'channels:meta.wecom.docsUrl',
+    configFields: [
+      {
+        key: 'botId',
+        label: 'channels:meta.wecom.fields.botId.label',
+        type: 'text',
+        placeholder: 'channels:meta.wecom.fields.botId.placeholder',
+        required: true,
+      },
+      {
+        key: 'secret',
+        label: 'channels:meta.wecom.fields.secret.label',
+        type: 'password',
+        placeholder: 'channels:meta.wecom.fields.secret.placeholder',
+        required: true,
+      },
+    ],
+    instructions: [
+      'channels:meta.wecom.instructions.0',
+      'channels:meta.wecom.instructions.1',
+      'channels:meta.wecom.instructions.2',
     ],
     isPlugin: true,
   },
@@ -496,7 +562,7 @@ export const CHANNEL_META: Record<ChannelType, ChannelMeta> = {
  * Get primary supported channels (non-plugin, commonly used)
  */
 export function getPrimaryChannels(): ChannelType[] {
-  return ['telegram', 'discord', 'whatsapp', 'dingtalk', 'feishu'];
+  return ['telegram', 'discord', 'whatsapp', 'dingtalk', 'feishu', 'wecom', 'qqbot'];
 }
 
 /**

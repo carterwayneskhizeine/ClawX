@@ -13,6 +13,19 @@
   "aiProviders": {
     "title": "AI Providers",
     "description": "Configure your AI model providers and API keys",
+    "overview": {
+      "title": "Provider Accounts",
+      "description": "A summary of the provider accounts and models currently configured.",
+      "noModelSelected": "No model selected",
+      "multiAccountReady": "Multi-account ready",
+      "singletonVendor": "Single-account vendor"
+    },
+    "authModes": {
+      "apiKey": "API Key",
+      "oauthDevice": "OAuth Device",
+      "oauthBrowser": "OAuth Browser",
+      "local": "Local"
+    },
     "sections": {
       "model": "Model Settings",
       "fallback": "Fallback Settings"
@@ -37,6 +50,7 @@
       "replaceApiKeyHelp": "Leave this field empty if you want to keep the currently stored API key.",
       "baseUrl": "Base URL",
       "modelId": "Model ID",
+      "protocol": "Protocol",
       "fallbackModels": "Fallback Models",
       "fallbackProviders": "Fallback Providers",
       "fallbackModelIds": "Fallback Model IDs",
@@ -59,6 +73,10 @@
       "setDefault": "Set as default",
       "editKey": "Edit API key",
       "delete": "Delete provider"
+    },
+    "protocols": {
+      "openai": "OpenAI Compatible",
+      "anthropic": "Anthropic Compatible"
     },
     "toast": {
       "added": "Provider added successfully",
@@ -85,6 +103,7 @@
       "cancel": "Cancel",
       "codeCopied": "Code copied to clipboard",
       "authFailed": "Authentication Failed",
+      "browserFlowUnavailable": "Browser OAuth is not wired for this provider yet.",
       "tryAgain": "Try Again",
       "approveLogin": "Approve Login",
       "step1": "Copy the authorization code below.",
@@ -195,6 +214,19 @@
     "cliPowershell": "PowerShell command.",
     "cmdUnavailable": "Command unavailable",
     "cmdCopied": "CLI command copied",
+    "wsDiagnostic": "WS Diagnostic Mode",
+    "wsDiagnosticDesc": "Temporarily enable WS/HTTP fallback chain for gateway RPC debugging.",
+    "wsDiagnosticEnabled": "WS diagnostic mode enabled",
+    "wsDiagnosticDisabled": "WS diagnostic mode disabled",
+    "telemetryViewer": "Telemetry Viewer",
+    "telemetryViewerDesc": "Local-only UX/performance telemetry, latest 200 entries.",
+    "telemetryAggregated": "Top Events",
+    "telemetryTotal": "Total",
+    "telemetryErrors": "Errors",
+    "telemetrySlow": "Slow (>=800ms)",
+    "telemetryEmpty": "No telemetry yet",
+    "telemetryCopied": "Telemetry copied",
+    "telemetryCleared": "Telemetry cleared",
     "installCmd": "Install \"openclaw\" Command",
     "installCmdDesc": "Installs ~/.local/bin/openclaw (no admin required)",
     "installTitle": "Install OpenClaw Command",
