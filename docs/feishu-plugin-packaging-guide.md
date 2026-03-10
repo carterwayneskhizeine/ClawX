@@ -1,7 +1,7 @@
 # ClawX 打包版飞书插件配置手册
 
 **日期**：2026-03-09
-**适用版本**：ClawX v0.1.23 / OpenClaw 2026.3.7 / Electron 40.6.0
+**适用版本**：ClawX v0.1.23 / OpenClaw 2026.3.2 / Electron 40.6.0
 
 ---
 
