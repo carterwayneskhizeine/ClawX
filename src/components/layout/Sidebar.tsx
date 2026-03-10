@@ -131,6 +131,7 @@ export function Sidebar() {
   const deleteSession = useChatStore((s) => s.deleteSession);
 
   const logout = useAuthStore((s) => s.logout);
+  const authUser = useAuthStore((s) => s.user);
 
   const navigate = useNavigate();
   const location = useLocation();
@@ -426,14 +427,16 @@ export function Sidebar() {
                   "rounded-lg overflow-hidden border border-muted-foreground/10 bg-muted",
                   sidebarCollapsed ? "h-10 w-10" : "h-8 w-8"
                 )}>
-                  <AvatarImage src="https://picsum.photos/seed/clawx-user/200" alt="User" />
-                  <AvatarFallback className="rounded-lg"><User className="h-4 w-4" /></AvatarFallback>
+                  <AvatarImage src={`https://picsum.photos/seed/${authUser?.username ?? 'user'}/200`} alt={authUser?.username ?? 'User'} />
+                  <AvatarFallback className="rounded-lg text-xs font-bold">
+                    {authUser?.username?.charAt(0)?.toUpperCase() ?? <User className="h-4 w-4" />}
+                  </AvatarFallback>
                 </Avatar>
                 {!sidebarCollapsed && (
                   <>
                     <div className="flex flex-col items-start min-w-0">
-                      <span className="truncate w-full font-semibold">User Admin</span>
-                      <span className="truncate w-full text-[10px] text-muted-foreground">Premium Account</span>
+                      <span className="truncate w-full font-semibold">{authUser?.username ?? 'User'}</span>
+                      <span className="truncate w-full text-[10px] text-muted-foreground">{authUser?.org_name ?? 'Premium Account'}</span>
                     </div>
                     <MoreHorizontal className="ml-auto h-4 w-4 text-muted-foreground" />
                   </>

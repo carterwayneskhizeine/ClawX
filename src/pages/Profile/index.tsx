@@ -12,7 +12,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Input } from '@/components/ui/input';
 import {
     Dialog,
@@ -55,6 +55,7 @@ export function Profile() {
                 <div className="px-8 pb-10 relative -mt-16 flex items-end justify-between">
                     <div className="relative group">
                         <Avatar className="h-[140px] w-[140px] rounded-[2rem] border-4 border-background shadow-2xl overflow-hidden">
+                            <AvatarImage src={`https://picsum.photos/seed/${user?.username ?? 'user'}/300`} alt={user?.username ?? 'User'} className="object-cover" />
                             <AvatarFallback className="text-4xl">
                                 {user?.username?.charAt(0)?.toUpperCase() ?? 'U'}
                             </AvatarFallback>
