@@ -6,6 +6,7 @@
 import { useState, useEffect } from 'react';
 import { Minus, Square, X, Copy } from 'lucide-react';
 import { invokeIpc } from '@/lib/api-client';
+import appIcon from '../../../resources/icons/tray-icon-Template.png';
 
 const isMac = window.electron?.platform === 'darwin';
 
@@ -48,7 +49,7 @@ function WindowsTitleBar() {
     <div className="drag-region flex h-10 shrink-0 items-center justify-between border-b bg-background">
       {/* Left: Icon + App Name */}
       <div className="no-drag flex items-center gap-2 pl-3">
-        {/* <img src={logoSvg} alt="ClawX" className="h-5 w-auto" /> */}
+        <img src={appIcon} alt="Dysense Icon" className="h-4 w-4" />
         <span className="text-xs font-medium text-muted-foreground select-none">
           Dysense
         </span>

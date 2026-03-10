@@ -23,19 +23,9 @@ function getIconsDir(): string {
 export function createTray(mainWindow: BrowserWindow): Tray {
   // Use platform-appropriate icon for system tray
   const iconsDir = getIconsDir();
-  let iconPath: string;
-
-  if (process.platform === 'win32') {
-    // Windows: use .ico for best quality in system tray
-    iconPath = join(iconsDir, 'icon.ico');
-  } else if (process.platform === 'darwin') {
-    // macOS: use Template.png for proper status bar icon
-    // The "Template" suffix tells macOS to treat it as a template image
-    iconPath = join(iconsDir, 'tray-icon-Template.png');
-  } else {
-    // Linux: use 32x32 PNG
-    iconPath = join(iconsDir, '32x32.png');
-  }
+  
+  // Use 16x16.png for the system tray as requested
+  const iconPath = join(iconsDir, '16x16.png');
 
   let icon = nativeImage.createFromPath(iconPath);
 
