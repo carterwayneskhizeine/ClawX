@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Upload, Loader2 } from 'lucide-react'
+import { Upload, Loader2, RefreshCw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
@@ -14,6 +14,7 @@ import {
 } from '@/components/ui/dialog'
 import { EmojiPicker } from './EmojiPicker'
 import { Agent } from '@/stores/agents'
+import { getAvatarUrl } from '@/lib/utils'
 
 interface AgentFormDialogProps {
     open: boolean
@@ -41,6 +42,7 @@ export function AgentFormDialog({
     const [agentId, setAgentId] = useState('')
     const [theme, setTheme] = useState('')
     const [avatarUrl, setAvatarUrl] = useState('')
+    const [avatarSeed, setAvatarSeed] = useState('')
     const [errors, setErrors] = useState<{ name?: string; agentId?: string }>({})
 
     const isEdit = !!agent
@@ -52,12 +54,15 @@ export function AgentFormDialog({
             setAgentId(agent.id)
             setTheme(agent.identity?.theme || '')
             setAvatarUrl(agent.identity?.avatarUrl || '')
+            setAvatarSeed(agent.id)
         } else {
             setName('')
             setEmoji('🤖')
             setAgentId('')
             setTheme('')
-            setAvatarUrl(`https://picsum.photos/seed/${Date.now()}/200`)
+            const seed = Date.now().toString()
+            setAvatarSeed(seed)
+            setAvatarUrl(getAvatarUrl(seed))
         }
     }, [agent, open])
 
@@ -101,6 +106,12 @@ export function AgentFormDialog({
         }
     }
 
+    const handleSeedRefresh = () => {
+        if (avatarSeed.trim()) {
+            setAvatarUrl(getAvatarUrl(avatarSeed))
+        }
+    }
+
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent className="sm:max-w-[500px]">
@@ -114,26 +125,39 @@ export function AgentFormDialog({
                 <div className="space-y-4 py-4">
                     {/* Avatar */}
                     <div className="flex items-center gap-4">
-                        <Avatar className="h-16 w-16 rounded-xl">
+                        <Avatar className="h-16 w-16 rounded-xl shrink-0">
                             <AvatarImage src={avatarUrl} />
                             <AvatarFallback className="text-2xl rounded-xl">
                                 {emoji}
                             </AvatarFallback>
                         </Avatar>
-                        <label className="cursor-pointer">
-                            <input
-                                type="file"
-                                accept="image/*"
-                                className="hidden"
-                                onChange={handleAvatarUpload}
-                            />
-                            <Button variant="outline" size="sm" type="button" asChild>
-                                <span className="flex items-center gap-2">
-                                    <Upload className="h-4 w-4" />
-                                    上传头像
-                                </span>
-                            </Button>
-                        </label>
+                        <div className="flex flex-col gap-2 w-full">
+                            <div className="flex items-center gap-2">
+                                <Input 
+                                    placeholder="输入随机词（Avatar Seed）..." 
+                                    value={avatarSeed} 
+                                    onChange={(e) => setAvatarSeed(e.target.value)}
+                                    title="随机头像种子词"
+                                />
+                                <Button variant="outline" size="icon" type="button" onClick={handleSeedRefresh} title="生成网络头像">
+                                    <RefreshCw className="h-4 w-4" />
+                                </Button>
+                            </div>
+                            <label className="cursor-pointer inline-block w-fit">
+                                <input
+                                    type="file"
+                                    accept="image/*"
+                                    className="hidden"
+                                    onChange={handleAvatarUpload}
+                                />
+                                <Button variant="outline" size="sm" type="button" asChild>
+                                    <span className="flex items-center gap-2">
+                                        <Upload className="h-4 w-4" />
+                                        上传本地头像
+                                    </span>
+                                </Button>
+                            </label>
+                        </div>
                     </div>
 
                     {/* Name */}

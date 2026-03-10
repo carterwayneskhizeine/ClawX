@@ -24,7 +24,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { AgentFormDialog } from '@/components/common/AgentFormDialog';
 import { AgentManageDialog } from '@/components/common/AgentManageDialog';
 import { AgentAdvancedConfigDialog } from '@/components/common/AgentAdvancedConfigDialog';
-import { cn } from '@/lib/utils';
+import { cn, getAvatarUrl } from '@/lib/utils';
 import { useNavigate } from 'react-router-dom';
 
 const DATA_7_DAYS = [
@@ -296,7 +296,7 @@ export function HomeDashboard() {
 
 function AgentCard({ agent, onClick }: { agent: Agent; onClick: () => void }) {
     // 使用随机互联网照片作为头像，如果没有设置 avatarUrl
-    const avatarUrl = agent.identity?.avatarUrl || `https://picsum.photos/seed/${agent.id}/200`;
+    const avatarUrl = agent.identity?.avatarUrl || getAvatarUrl(agent.id);
 
     return (
         <Card

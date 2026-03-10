@@ -28,7 +28,7 @@ import { ChatMessage } from '../Chat/ChatMessage';
 import { ChatInput } from '../Chat/ChatInput';
 import { extractText, extractThinking, extractImages, extractToolUse } from '../Chat/message-utils';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
-import { cn } from '@/lib/utils';
+import { cn, getAvatarUrl } from '@/lib/utils';
 
 export function EmployeeChat() {
     const { id: agentId } = useParams<{ id: string }>();
@@ -181,7 +181,7 @@ export function EmployeeChat() {
                         <ChevronLeft className="h-5 w-5" />
                     </Button>
                     <Avatar className="h-10 w-10 border-2 border-primary/20 p-0.5">
-                        <AvatarImage src={agent.identity?.avatarUrl || `https://picsum.photos/seed/${agentId}/200`} />
+                        <AvatarImage src={agent.identity?.avatarUrl || getAvatarUrl(agentId as string)} />
                         <AvatarFallback className="bg-primary/5 text-lg">
                             {agent.identity?.emoji || '🤖'}
                         </AvatarFallback>

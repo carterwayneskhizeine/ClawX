@@ -27,7 +27,7 @@ import {
   Monitor,
   ChevronDown,
 } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { cn, getAvatarUrl } from '@/lib/utils';
 import { useSettingsStore } from '@/stores/settings';
 import { useChatStore } from '@/stores/chat';
 import { useAgentsStore } from '@/stores/agents';
@@ -370,7 +370,7 @@ export function Sidebar() {
                 {!sidebarCollapsed && agentsExpanded && (
                   <div className="flex flex-col gap-1 max-h-[40vh] overflow-y-auto pr-1 pl-4 mt-1 animate-in fade-in slide-in-from-top-2 duration-300">
                     {agents.map((agent) => {
-                      const avatarUrl = agent.identity?.avatarUrl || `https://picsum.photos/seed/${agent.id}/200`;
+                      const avatarUrl = agent.identity?.avatarUrl || getAvatarUrl(agent.id);
                       return (
                         <NavItem
                           key={agent.id}
@@ -427,7 +427,7 @@ export function Sidebar() {
                   "rounded-lg overflow-hidden border border-muted-foreground/10 bg-muted",
                   sidebarCollapsed ? "h-10 w-10" : "h-8 w-8"
                 )}>
-                  <AvatarImage src={`https://picsum.photos/seed/${authUser?.username ?? 'user'}/200`} alt={authUser?.username ?? 'User'} />
+                  <AvatarImage src={getAvatarUrl(authUser?.username ?? 'user')} alt={authUser?.username ?? 'User'} />
                   <AvatarFallback className="rounded-lg text-xs font-bold">
                     {authUser?.username?.charAt(0)?.toUpperCase() ?? <User className="h-4 w-4" />}
                   </AvatarFallback>

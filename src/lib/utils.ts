@@ -70,3 +70,17 @@ export function truncate(text: string, maxLength: number): string {
   }
   return text.slice(0, maxLength - 3) + '...';
 }
+
+/**
+ * Global avatar seed suffix.
+ * Change this value (e.g. "-v2", "1", "cute") to randomize all seeded avatars across the application.
+ */
+export const GLOBAL_AVATAR_SEED_SUFFIX = "1";
+
+/**
+ * Get a deterministic random avatar URL based on a seed string.
+ */
+export function getAvatarUrl(seed: string): string {
+  const encodedSeed = encodeURIComponent(seed.trim());
+  return `https://picsum.photos/seed/${encodedSeed}${GLOBAL_AVATAR_SEED_SUFFIX}/200`;
+}

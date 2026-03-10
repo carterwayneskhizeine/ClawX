@@ -10,7 +10,7 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { createPortal } from 'react-dom';
 import { Button } from '@/components/ui/button';
-import { cn } from '@/lib/utils';
+import { cn, getAvatarUrl } from '@/lib/utils';
 import { invokeIpc } from '@/lib/api-client';
 import { useAuthStore } from '@/stores/auth';
 import { useAgentsStore } from '@/stores/agents';
@@ -68,8 +68,8 @@ export const ChatMessage = memo(function ChatMessage({
   const agentId = agentIdMatch ? agentIdMatch[1] : 'ai';
   const agent = agents.find(a => a.id === agentId);
   
-  const userAvatarUrl = `https://picsum.photos/seed/${authUser?.username ?? 'user'}/200`;
-  const aiAvatarUrl = agent?.identity?.avatarUrl || `https://picsum.photos/seed/${agentId}/200`;
+  const userAvatarUrl = getAvatarUrl(authUser?.username ?? 'user');
+  const aiAvatarUrl = agent?.identity?.avatarUrl || getAvatarUrl(agentId);
 
   // Never render tool result messages in chat UI
   if (isToolResult) return null;
