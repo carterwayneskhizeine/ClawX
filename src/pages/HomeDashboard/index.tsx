@@ -1,8 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import {
     Plus,
     Settings
 } from 'lucide-react';
+import { authApi, type ComputeBalanceResponse, type ComputeLedgerItem } from '@/lib/auth-api';
 import { motion } from 'framer-motion';
 import {
     BarChart,
@@ -27,22 +28,26 @@ import { AgentAdvancedConfigDialog } from '@/components/common/AgentAdvancedConf
 import { cn, getAvatarUrl } from '@/lib/utils';
 import { useNavigate } from 'react-router-dom';
 
-const DATA_7_DAYS = [
-    { name: '周一', usage: 1200 },
-    { name: '周二', usage: 1900 },
-    { name: '周三', usage: 800 },
-    { name: '周四', usage: 2400 },
-    { name: '周五', usage: 1600 },
-    { name: '周六', usage: 500 },
-    { name: '周日', usage: 200 },
-];
+const DAY_NAMES = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
 
-const MOCK_USER = { points: 8000, totalPoints: 10000 };
-
-const PIE_DATA = [
-    { name: '已使用', value: MOCK_USER.totalPoints - MOCK_USER.points },
-    { name: '剩余', value: MOCK_USER.points },
-];
+function buildLast7DaysChart(items: ComputeLedgerItem[]) {
+    const today = new Date();
+    const days = Array.from({ length: 7 }, (_, i) => {
+        const d = new Date(today);
+        d.setDate(today.getDate() - (6 - i));
+        return {
+            name: DAY_NAMES[d.getDay()],
+            dateKey: d.toISOString().slice(0, 10),
+            usage: 0,
+        };
+    });
+    items.forEach(item => {
+        const key = new Date(item.created_at * 1000).toISOString().slice(0, 10);
+        const slot = days.find(d => d.dateKey === key);
+        if (slot) slot.usage += Math.abs(item.delta_compute);
+    });
+    return days;
+}
 
 export function HomeDashboard() {
     const navigate = useNavigate();
@@ -56,6 +61,25 @@ export function HomeDashboard() {
     const [editingAgent, setEditingAgent] = useState<Agent | null>(null);
     const [configAgent, setConfigAgent] = useState<Agent | null>(null);
     const [deletingIds, setDeletingIds] = useState<Set<string>>(new Set());
+
+    const [balance, setBalance] = useState<ComputeBalanceResponse | null>(null);
+    const [recentLedger, setRecentLedger] = useState<ComputeLedgerItem[]>([]);
+
+    useEffect(() => {
+        authApi.getComputeBalance().then(setBalance).catch(() => {});
+        authApi.getComputeLedger({ limit: 200 }).then(r => setRecentLedger(r.items)).catch(() => {});
+    }, []);
+
+    const chartData7Days = useMemo(() => buildLast7DaysChart(recentLedger), [recentLedger]);
+
+    const pieData = useMemo(() => {
+        const remaining = balance?.compute_balance ?? 0;
+        const todayUsed = balance?.today_consumption ?? 0;
+        return [
+            { name: '今日消耗', value: todayUsed },
+            { name: '当前余额', value: remaining },
+        ];
+    }, [balance]);
 
     useEffect(() => {
         fetchAgents();
@@ -154,7 +178,7 @@ export function HomeDashboard() {
                                     <ResponsiveContainer width="100%" height="100%">
                                         <PieChart>
                                             <Pie
-                                                data={PIE_DATA}
+                                                data={pieData}
                                                 cx="50%"
                                                 cy="50%"
                                                 innerRadius={60}
@@ -163,7 +187,7 @@ export function HomeDashboard() {
                                                 dataKey="value"
                                                 stroke="none"
                                             >
-                                                {PIE_DATA.map((_entry, index) => (
+                                                {pieData.map((_entry, index) => (
                                                     <Cell
                                                         key={`cell-${index}`}
                                                         fill={index === 0 ? 'rgba(226, 232, 240, 0.5)' : '#1677ff'}
@@ -182,11 +206,15 @@ export function HomeDashboard() {
                                 <div className="space-y-4 text-center md:text-left">
                                     <div>
                                         <span className="text-xs text-muted-foreground dark:text-slate-500 block">当前可用积分</span>
-                                        <div className="text-3xl font-black text-blue-600 dark:text-blue-500 drop-shadow-[0_0_10px_rgba(22,119,255,0.3)]">{MOCK_USER.points.toLocaleString()}</div>
+                                        <div className="text-3xl font-black text-blue-600 dark:text-blue-500 drop-shadow-[0_0_10px_rgba(22,119,255,0.3)]">
+                                            {(balance?.compute_balance ?? 0).toLocaleString()}
+                                        </div>
                                     </div>
                                     <div>
                                         <span className="text-xs text-muted-foreground dark:text-slate-500 block">今日消耗积分</span>
-                                        <div className="text-xl font-bold text-slate-700 dark:text-slate-200">1,240</div>
+                                        <div className="text-xl font-bold text-slate-700 dark:text-slate-200">
+                                            {(balance?.today_consumption ?? 0).toLocaleString()}
+                                        </div>
                                     </div>
                                     <div className="pt-2">
                                         <Button
@@ -208,7 +236,7 @@ export function HomeDashboard() {
                             <span className="uppercase tracking-wider font-semibold text-xs block mb-4 text-muted-foreground dark:text-slate-500">近7天使用趋势</span>
                             <div className="h-[300px] w-full">
                                 <ResponsiveContainer width="100%" height="100%">
-                                    <BarChart data={DATA_7_DAYS}>
+                                    <BarChart data={chartData7Days}>
                                         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="currentColor" className="opacity-10 dark:opacity-5" />
                                         <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 12 }} />
                                         <YAxis axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 12 }} />
@@ -236,14 +264,15 @@ export function HomeDashboard() {
                     if (editingAgent) {
                         await updateAgent(editingAgent.id, {
                             name: data.name,
-                            avatar: data.avatar
+                            avatarUrl: data.avatarUrl
                         });
                     } else {
                         await createAgent({
                             agentId: data.agentId!,
                             displayName: data.name,
                             emoji: data.emoji,
-                            workspace: undefined
+                            workspace: undefined,
+                            avatarUrl: data.avatarUrl
                         });
                     }
                     setIsCreateDialogOpen(false);

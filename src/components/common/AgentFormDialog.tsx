@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Upload, Loader2, RefreshCw } from 'lucide-react'
+import { Loader2, RefreshCw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
@@ -12,9 +12,8 @@ import {
     DialogHeader,
     DialogTitle,
 } from '@/components/ui/dialog'
-import { EmojiPicker } from './EmojiPicker'
 import { Agent } from '@/stores/agents'
-import { getAvatarUrl } from '@/lib/utils'
+import { getAvatarUrl, extractAvatarSeed } from '@/lib/utils'
 
 interface AgentFormDialogProps {
     open: boolean
@@ -25,7 +24,7 @@ interface AgentFormDialogProps {
         emoji: string
         agentId?: string
         theme?: string
-        avatar?: string
+        avatarUrl?: string
     }) => Promise<void>
     loading?: boolean
 }
@@ -38,7 +37,6 @@ export function AgentFormDialog({
     loading = false
 }: AgentFormDialogProps) {
     const [name, setName] = useState('')
-    const [emoji, setEmoji] = useState('🤖')
     const [agentId, setAgentId] = useState('')
     const [theme, setTheme] = useState('')
     const [avatarUrl, setAvatarUrl] = useState('')
@@ -50,14 +48,15 @@ export function AgentFormDialog({
     useEffect(() => {
         if (agent) {
             setName(agent.name)
-            setEmoji(agent.identity?.emoji || '🤖')
             setAgentId(agent.id)
             setTheme(agent.identity?.theme || '')
-            setAvatarUrl(agent.identity?.avatarUrl || '')
-            setAvatarSeed(agent.id)
+            const currentAvatarUrl = agent.identity?.avatarUrl || getAvatarUrl(agent.id)
+            setAvatarUrl(currentAvatarUrl)
+            
+            const extractedSeed = extractAvatarSeed(currentAvatarUrl)
+            setAvatarSeed(extractedSeed !== null ? extractedSeed : agent.id)
         } else {
             setName('')
-            setEmoji('🤖')
             setAgentId('')
             setTheme('')
             const seed = Date.now().toString()
@@ -88,23 +87,13 @@ export function AgentFormDialog({
 
         await onSave({
             name: name.trim(),
-            emoji,
+            emoji: '🤖', // Defaulting to robot emoji since we removed the picker 
             agentId: isEdit ? agent!.id : agentId.trim(),
             theme: theme.trim(),
-            avatar: avatarUrl
+            avatarUrl: avatarUrl
         })
     }
 
-    const handleAvatarUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0]
-        if (file) {
-            const reader = new FileReader()
-            reader.onload = () => {
-                setAvatarUrl(reader.result as string)
-            }
-            reader.readAsDataURL(file)
-        }
-    }
 
     const handleSeedRefresh = () => {
         if (avatarSeed.trim()) {
@@ -127,8 +116,8 @@ export function AgentFormDialog({
                     <div className="flex items-center gap-4">
                         <Avatar className="h-16 w-16 rounded-xl shrink-0">
                             <AvatarImage src={avatarUrl} />
-                            <AvatarFallback className="text-2xl rounded-xl">
-                                {emoji}
+                            <AvatarFallback className="text-2xl rounded-xl bg-primary/10">
+                                🤖
                             </AvatarFallback>
                         </Avatar>
                         <div className="flex flex-col gap-2 w-full">
@@ -143,20 +132,9 @@ export function AgentFormDialog({
                                     <RefreshCw className="h-4 w-4" />
                                 </Button>
                             </div>
-                            <label className="cursor-pointer inline-block w-fit">
-                                <input
-                                    type="file"
-                                    accept="image/*"
-                                    className="hidden"
-                                    onChange={handleAvatarUpload}
-                                />
-                                <Button variant="outline" size="sm" type="button" asChild>
-                                    <span className="flex items-center gap-2">
-                                        <Upload className="h-4 w-4" />
-                                        上传本地头像
-                                    </span>
-                                </Button>
-                            </label>
+                            <p className="text-[10px] text-muted-foreground mr-1">
+                                提示：修改此 Seed 值将生成不同的随机网络头像，点击右侧刷新按钮应用。
+                            </p>
                         </div>
                     </div>
 
@@ -172,12 +150,6 @@ export function AgentFormDialog({
                         {errors.name && (
                             <p className="text-xs text-destructive">{errors.name}</p>
                         )}
-                    </div>
-
-                    {/* Emoji */}
-                    <div className="space-y-2">
-                        <label className="text-sm font-medium">图标 (Emoji)</label>
-                        <EmojiPicker value={emoji} onChange={setEmoji} />
                     </div>
 
                     {/* Agent ID (only for create) */}

@@ -84,3 +84,20 @@ export function getAvatarUrl(seed: string): string {
   const encodedSeed = encodeURIComponent(seed.trim());
   return `https://picsum.photos/seed/${encodedSeed}${GLOBAL_AVATAR_SEED_SUFFIX}/200`;
 }
+
+/**
+ * Attempt to extract the seed from a generated avatar URL.
+ */
+export function extractAvatarSeed(url: string): string | null {
+  if (!url) return null;
+  try {
+    const regex = new RegExp(`^https://picsum\\.photos/seed/(.*?)${GLOBAL_AVATAR_SEED_SUFFIX}/200$`);
+    const match = url.match(regex);
+    if (match && match[1]) {
+      return decodeURIComponent(match[1]);
+    }
+  } catch (e) {
+    return null;
+  }
+  return null;
+}

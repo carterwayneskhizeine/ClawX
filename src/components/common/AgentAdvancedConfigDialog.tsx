@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Settings2, CheckCircle2 } from 'lucide-react'
+import { Settings2, CheckCircle2, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -13,7 +13,6 @@ import {
 } from '@/components/ui/dialog'
 import { Agent } from '@/stores/agents'
 import { useAgentFeishuStore, useAgentFeishuConfig } from '@/stores/agentFeishu'
-import { BindingTerminalLog } from './BindingTerminalLog'
 
 interface AgentAdvancedConfigDialogProps {
     open: boolean
@@ -93,7 +92,7 @@ export function AgentAdvancedConfigDialog({
                 <DialogHeader>
                     <DialogTitle className="flex items-center gap-2">
                         <Settings2 className="h-5 w-5" />
-                        {agent.name} - 高级配置
+                        {agent.name} - 飞书机器人
                     </DialogTitle>
                     <DialogDescription>
                         连接到集成协议，让数字员工支持自动化对话与外部触发。
@@ -101,30 +100,7 @@ export function AgentAdvancedConfigDialog({
                 </DialogHeader>
 
                 <div className="space-y-6 py-4">
-                    {/* Integration Platform List */}
-                    <div className="space-y-3">
-                        <Label className="text-sm font-medium">集成协议</Label>
-                        <div className="grid gap-3">
-                            <div className="flex items-center justify-between p-4 rounded-lg border bg-muted/30">
-                                <div className="flex items-center gap-3">
-                                    <div className="w-10 h-10 bg-green-100 dark:bg-green-900/30 rounded-lg flex items-center justify-center">
-                                        <span className="text-xl">📱</span>
-                                    </div>
-                                    <div>
-                                        <p className="font-medium">飞书 Robot</p>
-                                        <p className="text-xs text-muted-foreground">多账号独立绑定协议</p>
-                                    </div>
-                                </div>
-                                {config?.paired && (
-                                    <span className="text-xs px-2 py-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 rounded-full">
-                                        已绑定
-                                    </span>
-                                )}
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Feishu Binding Section */}
+                        {/* Feishu Binding Section */}
                     <div className="space-y-4 pt-4 border-t">
                         <Label className="text-sm font-medium">飞书绑定配置</Label>
 
@@ -243,9 +219,29 @@ export function AgentAdvancedConfigDialog({
                             </div>
                         )}
 
-                        {/* 终端日志显示 */}
-                        {bindingLog && (bindingStep !== 'done' && bindingStep !== 'idle') && (
-                            <BindingTerminalLog log={bindingLog} />
+                        {/* 进度提示及警告说明 */}
+                        {(bindingStep !== 'idle' && bindingStep !== 'done' && bindingStep !== 'error') && (
+                            <div className="space-y-4 p-4 rounded-xl border bg-muted/20">
+                                <div className="space-y-2">
+                                    <div className="flex items-center justify-between text-sm">
+                                        <span className="font-medium text-slate-700 dark:text-slate-300">
+                                            {bindingStep === 'pairing' ? '等待您去获取并输入配对码...' : '自动化配置处理中...'}
+                                        </span>
+                                        {bindingLoading && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
+                                    </div>
+                                    <div className="h-1.5 w-full bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                                        <div className="h-full bg-blue-500 rounded-full w-full animate-pulse"></div>
+                                    </div>
+                                </div>
+                                <div className="flex gap-2 items-start text-xs text-slate-500 dark:text-slate-400">
+                                    <span className="text-amber-500 mt-0.5 text-sm">⚠️</span>
+                                    <p className="leading-relaxed">
+                                        配置飞书机器人时，系统将在后台自动安装协议所需的依赖模块。在此期间，
+                                        <span className="font-semibold text-amber-600 dark:text-amber-500">网关服务会临时断开重连，受限于网络环境，整个安装配置过程大约需要 3 分钟。</span>
+                                        <br/>请不要惊慌，耐心等待，切勿关闭此窗口或强制退出程序。
+                                    </p>
+                                </div>
+                            </div>
                         )}
                     </div>
                 </div>

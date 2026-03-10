@@ -18,7 +18,7 @@ import {
     TableRow,
 } from '@/components/ui/table'
 import { Agent } from '@/stores/agents'
-import { cn } from '@/lib/utils'
+import { cn, getAvatarUrl } from '@/lib/utils'
 
 interface AgentManageDialogProps {
     open: boolean
@@ -115,9 +115,9 @@ export function AgentManageDialog({
                                     <TableRow key={agent.id}>
                                         <TableCell>
                                             <Avatar className="h-10 w-10 rounded-lg">
-                                                <AvatarImage src={agent.identity?.avatarUrl} />
-                                                <AvatarFallback className="rounded-lg text-lg">
-                                                    {agent.identity?.emoji || '🤖'}
+                                                <AvatarImage src={agent.identity?.avatarUrl || getAvatarUrl(agent.id)} />
+                                                <AvatarFallback className="rounded-lg text-lg bg-primary/10">
+                                                    🤖
                                                 </AvatarFallback>
                                             </Avatar>
                                         </TableCell>
@@ -145,7 +145,7 @@ export function AgentManageDialog({
                                                     onClick={() => onAdvancedConfig(agent)}
                                                 >
                                                     <Settings2 className="h-4 w-4 mr-1" />
-                                                    高级配置
+                                                    飞书机器人
                                                 </Button>
                                                 {agent.id !== 'main' && (
                                                     <Button

@@ -18,6 +18,7 @@ export interface Agent {
 
 // 本地缓存 key
 const AGENT_NAMES_STORAGE_KEY = 'clawx_agent_display_names';
+const AGENT_AVATARS_STORAGE_KEY = 'clawx_agent_avatar_urls';
 
 // 从 localStorage 加载缓存的显示名称
 function loadAgentDisplayNames(): Record<string, string> {
@@ -38,19 +39,41 @@ function saveAgentDisplayNames(names: Record<string, string>) {
     }
 }
 
+// 从 localStorage 加载头像 URL 缓存
+function loadAgentAvatarUrls(): Record<string, string> {
+    try {
+        const stored = localStorage.getItem(AGENT_AVATARS_STORAGE_KEY);
+        return stored ? JSON.parse(stored) : {};
+    } catch {
+        return {};
+    }
+}
+
+// 保存头像 URL 到 localStorage
+function saveAgentAvatarUrls(urls: Record<string, string>) {
+    try {
+        localStorage.setItem(AGENT_AVATARS_STORAGE_KEY, JSON.stringify(urls));
+    } catch (e) {
+        console.warn('Failed to save agent avatar urls:', e);
+    }
+}
+
 interface AgentsState {
     agents: Agent[];
     loading: boolean;
     // 本地缓存的显示名称映射 (agentId -> displayName)
     agentDisplayNames: Record<string, string>;
+    // 本地缓存的头像 URL映射 (agentId -> avatarUrl)
+    agentAvatarUrls: Record<string, string>;
     fetchAgents: () => Promise<void>;
     createAgent: (params: {
         agentId: string;
         displayName: string;
         emoji?: string;
         workspace?: string;
+        avatarUrl?: string;
     }) => Promise<void>;
-    updateAgent: (agentId: string, params: { name?: string; avatar?: string }) => Promise<void>;
+    updateAgent: (agentId: string, params: { name?: string; avatarUrl?: string }) => Promise<void>;
     deleteAgent: (agentId: string) => Promise<void>;
     setAgentStatus: (agentId: string, status: 'idle' | 'busy') => void;
 }
@@ -64,6 +87,7 @@ export const useAgentsStore = create<AgentsState>((set, get) => ({
     agents: [],
     loading: false,
     agentDisplayNames: loadAgentDisplayNames(),
+    agentAvatarUrls: loadAgentAvatarUrls(),
 
     fetchAgents: async () => {
         set({ loading: true });
@@ -83,6 +107,8 @@ export const useAgentsStore = create<AgentsState>((set, get) => ({
 
             // 获取本地缓存的显示名称
             const cachedNames = get().agentDisplayNames;
+            // 获取本地缓存的头像 URL
+            const cachedAvatars = get().agentAvatarUrls;
 
             let mappedAgents: Agent[] = (agentsList).map((agent: any) => {
                 // 优先使用本地缓存的名称（用户创建时输入的中文名）
@@ -90,13 +116,17 @@ export const useAgentsStore = create<AgentsState>((set, get) => ({
                 // 最后使用 id
                 const cachedName = cachedNames[agent.id];
                 const displayName = cachedName || agent.name || agent.identity?.name || (agent.id === 'main' ? '通用助手' : agent.id);
+                // 优先使用本地缓存的头像 URL
+                const cachedAvatarUrl = cachedAvatars[agent.id];
+                const identity = agent.identity ? {
+                    ...agent.identity,
+                    avatarUrl: cachedAvatarUrl || agent.identity.avatarUrl,
+                } : (cachedAvatarUrl ? { avatarUrl: cachedAvatarUrl } : undefined);
                 return {
                     id: agent.id,
                     name: displayName,
                     workspace: agent.workspace,
-                    identity: agent.identity,
-                    // 所有在 Gateway 中存在的 agent 都默认为 idle（在线）
-                    // 只有当 Gateway 返回明确的状态信息时才有 busy
+                    identity,
                     status: 'idle' as const,
                 };
             });
@@ -112,7 +142,7 @@ export const useAgentsStore = create<AgentsState>((set, get) => ({
         }
     },
 
-    createAgent: async ({ agentId, displayName, emoji, workspace }) => {
+    createAgent: async ({ agentId, displayName, emoji, workspace, avatarUrl }) => {
         set({ loading: true });
         try {
             // Step 0: 先保存显示名称到本地缓存（乐观更新）
@@ -127,6 +157,7 @@ export const useAgentsStore = create<AgentsState>((set, get) => ({
                 name: agentId,
                 workspace: workspacePath,
                 emoji: emoji || '🤖',
+                avatarUrl: avatarUrl
             });
 
             // Step 2: Set display name via update with retries
@@ -168,11 +199,30 @@ export const useAgentsStore = create<AgentsState>((set, get) => ({
     },
 
     updateAgent: async (agentId, params) => {
-        await invokeIpc('gateway:rpc', 'agents.update', {
-            agentId,
-            ...params,
-        });
+        if (params.name) {
+            const currentNames = get().agentDisplayNames;
+            const newNames = { ...currentNames, [agentId]: params.name };
+            set({ agentDisplayNames: newNames });
+            saveAgentDisplayNames(newNames);
+        }
+        if (params.avatarUrl) {
+            // 将头像 URL 本地持久化（不依赖 Gateway 存储）
+            const currentAvatars = get().agentAvatarUrls;
+            const newAvatars = { ...currentAvatars, [agentId]: params.avatarUrl };
+            set({ agentAvatarUrls: newAvatars });
+            saveAgentAvatarUrls(newAvatars);
+            // 同时也尝试告知 Gateway（即便失败也不影响本地缓存）
+        }
+        try {
+            await invokeIpc('gateway:rpc', 'agents.update', {
+                agentId,
+                ...params,
+            });
+        } catch (e) {
+            console.warn('agents.update RPC failed (avatar may not be supported by Gateway):', e);
+        }
         await get().fetchAgents();
+        dispatchAgentsUpdated();
     },
 
     deleteAgent: async (agentId) => {
