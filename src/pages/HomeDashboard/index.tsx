@@ -26,6 +26,7 @@ import { AgentManageDialog } from '@/components/common/AgentManageDialog';
 import { AgentAdvancedConfigDialog } from '@/components/common/AgentAdvancedConfigDialog';
 import { cn, getAvatarUrl } from '@/lib/utils';
 import { useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
 
 const DAY_NAMES = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
 
@@ -65,8 +66,12 @@ export function HomeDashboard() {
     const [recentLedger, setRecentLedger] = useState<ComputeLedgerItem[]>([]);
 
     useEffect(() => {
-        authApi.getComputeBalance().then(setBalance).catch(() => {});
-        authApi.getComputeLedger({ limit: 200 }).then(r => setRecentLedger(r.items)).catch(() => {});
+        authApi.getComputeBalance()
+            .then(setBalance)
+            .catch((err) => toast.error('获取算力余额失败: ' + err.message));
+        authApi.getComputeLedger({ limit: 200 })
+            .then(r => setRecentLedger(r.items))
+            .catch((err) => toast.error('获取算力流水失败: ' + err.message));
     }, []);
 
     const chartData7Days = useMemo(() => buildLast7DaysChart(recentLedger), [recentLedger]);
