@@ -12,7 +12,9 @@ import { createPortal } from 'react-dom';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { invokeIpc } from '@/lib/api-client';
-import type { RawMessage, AttachedFileMeta } from '@/stores/chat';
+import { useAuthStore } from '@/stores/auth';
+import { useAgentsStore } from '@/stores/agents';
+import { useChatStore, type RawMessage, type AttachedFileMeta } from '@/stores/chat';
 import { extractText, extractThinking, extractImages, extractToolUse, formatTimestamp } from './message-utils';
 
 interface ChatMessageProps {
@@ -58,6 +60,17 @@ export const ChatMessage = memo(function ChatMessage({
   const attachedFiles = message._attachedFiles || [];
   const [lightboxImg, setLightboxImg] = useState<{ src: string; fileName: string; filePath?: string; base64?: string; mimeType?: string } | null>(null);
 
+  const authUser = useAuthStore(s => s.user);
+  const currentSessionKey = useChatStore(s => s.currentSessionKey);
+  const agents = useAgentsStore(s => s.agents);
+
+  const agentIdMatch = currentSessionKey?.match(/^agent:([^:]+)/);
+  const agentId = agentIdMatch ? agentIdMatch[1] : 'ai';
+  const agent = agents.find(a => a.id === agentId);
+  
+  const userAvatarUrl = `https://picsum.photos/seed/${authUser?.username ?? 'user'}/200`;
+  const aiAvatarUrl = agent?.identity?.avatarUrl || `https://picsum.photos/seed/${agentId}/200`;
+
   // Never render tool result messages in chat UI
   if (isToolResult) return null;
 
@@ -72,9 +85,9 @@ export const ChatMessage = memo(function ChatMessage({
       )}
     >
       {/* Avatar */}
-      <Avatar className="h-8 w-8 shrink-0 mt-1">
+      <Avatar className="h-8 w-8 shrink-0 mt-1 border border-border/50">
         <AvatarImage 
-          src={isUser ? 'https://picsum.photos/seed/clawx-user/200' : 'https://picsum.photos/seed/clawx-ai/200'} 
+          src={isUser ? userAvatarUrl : aiAvatarUrl} 
         />
         <AvatarFallback className={cn(
           isUser
