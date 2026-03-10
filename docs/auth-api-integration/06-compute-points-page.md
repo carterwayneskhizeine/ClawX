@@ -79,7 +79,7 @@ const totalPages = Math.ceil(total / ITEMS_PER_PAGE);
 
 ### 3. 30 天用量图表
 
-当前使用随机数据 `DATA_30_DAYS`。两种方案：
+当前使用随机数据 `DATA_30_DAYS`。两种方案，先使用方案 A：
 
 **方案 A**：用流水数据聚合（推荐）
 ```typescript

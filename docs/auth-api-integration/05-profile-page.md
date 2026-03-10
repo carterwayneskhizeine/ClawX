@@ -69,10 +69,9 @@ export function Profile() {
 
 ### 4. 头像处理
 
-当前使用随机图片 URL。用户真实头像 API 暂未提供，可选方案：
+当前使用随机图片 URL。用户真实头像 API 暂未提供：
 
 - 保持使用生成头像（基于用户名 hash）
-- 使用 `AvatarFallback` 显示用户名首字母
 
 ```typescript
 <AvatarFallback className="text-4xl">
