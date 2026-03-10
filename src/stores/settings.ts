@@ -45,6 +45,9 @@ interface SettingsState {
   // Security
   fileAccessAllowed: boolean;
 
+  // Debug
+  openclawVerboseLogging: boolean;
+
   // Actions
   init: () => Promise<void>;
   setTheme: (theme: Theme) => void;
@@ -67,6 +70,7 @@ interface SettingsState {
   setDevModeUnlocked: (value: boolean) => void;
   setUiMode: (mode: 'classic' | 'new') => void;
   setFileAccessAllowed: (value: boolean) => void;
+  setOpenclawVerboseLogging: (value: boolean) => void;
   markSetupComplete: () => void;
   resetSettings: () => void;
 }
@@ -98,6 +102,7 @@ const defaultSettings = {
   uiMode: 'new' as 'classic' | 'new',
   setupComplete: false,
   fileAccessAllowed: true,
+  openclawVerboseLogging: false,
 };
 
 export const useSettingsStore = create<SettingsState>()(
@@ -141,6 +146,7 @@ export const useSettingsStore = create<SettingsState>()(
       setDevModeUnlocked: (devModeUnlocked) => set({ devModeUnlocked }),
       setUiMode: (uiMode) => { set({ uiMode }); void invokeIpc('settings:set', 'uiMode', uiMode).catch(() => { }); },
       setFileAccessAllowed: (fileAccessAllowed) => { set({ fileAccessAllowed }); void invokeIpc('settings:set', 'fileAccessAllowed', fileAccessAllowed).catch(() => { }); },
+      setOpenclawVerboseLogging: (openclawVerboseLogging) => { set({ openclawVerboseLogging }); void invokeIpc('settings:set', 'openclawVerboseLogging', openclawVerboseLogging).catch(() => { }); },
       markSetupComplete: () => set({ setupComplete: true }),
       resetSettings: () => set(defaultSettings),
     }),

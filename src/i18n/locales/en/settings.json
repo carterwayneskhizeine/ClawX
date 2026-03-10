@@ -188,6 +188,8 @@
     "gatewayTokenDesc": "Paste this into Control UI settings if prompted",
     "tokenUnavailable": "Token unavailable",
     "tokenCopied": "Gateway token copied",
+    "verboseLogging": "Verbose Logging",
+    "verboseLoggingDesc": "Enable detailed OpenClaw logs output to D:\\TheClaw\\logs",
     "cli": "OpenClaw CLI",
     "cliDesc": "Copy a command to run OpenClaw without modifying PATH.",
     "cliPowershell": "PowerShell command.",

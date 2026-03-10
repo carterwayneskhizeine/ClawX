@@ -71,6 +71,8 @@ export function Settings() {
     setAutoDownloadUpdate,
     devModeUnlocked,
     setDevModeUnlocked,
+    openclawVerboseLogging,
+    setOpenclawVerboseLogging,
   } = useSettingsStore();
 
   const { status: gatewayStatus, restart: restartGateway } = useGatewayStore();
@@ -621,7 +623,22 @@ export function Settings() {
             <CardDescription>{t('developer.description')}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="space-y-3">
+            <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <Label>{t('developer.verboseLogging')}</Label>
+                <p className="text-sm text-muted-foreground">
+                  {t('developer.verboseLoggingDesc')}
+                </p>
+              </div>
+              <Switch
+                checked={openclawVerboseLogging}
+                onCheckedChange={setOpenclawVerboseLogging}
+              />
+            </div>
+
+            <Separator />
+
               <div>
                 <Label>{t('advanced.transport.label')}</Label>
                 <p className="text-sm text-muted-foreground">

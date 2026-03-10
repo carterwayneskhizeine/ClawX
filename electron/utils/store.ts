@@ -47,7 +47,10 @@ export interface AppSettings {
   // UI State
   sidebarCollapsed: boolean;
   devModeUnlocked: boolean;
-  
+
+  // Debug
+  openclawVerboseLogging: boolean;
+
   // Presets
   selectedBundles: string[];
   enabledSkills: string[];
@@ -85,7 +88,10 @@ const defaults: AppSettings = {
   // UI State
   sidebarCollapsed: false,
   devModeUnlocked: false,
-  
+
+  // Debug
+  openclawVerboseLogging: false,
+
   // Presets
   selectedBundles: ['productivity', 'developer'],
   enabledSkills: [],

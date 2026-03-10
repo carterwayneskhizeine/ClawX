@@ -69,6 +69,27 @@ export interface RechargePackagesResponse {
     items: RechargePackage[];
 }
 
+export interface RechargeOrderResponse {
+    id: string;
+    out_trade_no: string;
+    amount_cents: number;
+    token_delta: number;
+    currency: string;
+    channel: string;
+    status: string;
+    code_url?: string;
+    wechat_error?: string;
+}
+
+export interface OrderStatusResponse {
+    out_trade_no: string;
+    status: 'pending' | 'success' | 'failed' | 'refunded' | 'closed';
+    amount_cents: number;
+    token_delta: number;
+    channel: string;
+    created_at: number;
+}
+
 // ── Request Helper ───────────────────────────────────────────────
 
 async function request<T>(
@@ -146,4 +167,43 @@ export const authApi = {
 
     getRechargePackages: () =>
         request<RechargePackagesResponse>('/api/recharge/packages'),
+
+    createRechargeOrderWithQR: async (packageId: string): Promise<{ qrBlob: Blob; outTradeNo: string | null }> => {
+        const url = `${API_BASE_URL}/api/recharge/orders-with-qr`;
+        const { useAuthStore } = await import('@/stores/auth');
+        const token = useAuthStore.getState().token;
+        const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+        if (token) headers['Authorization'] = `Bearer ${token}`;
+
+        const response = await fetch(url, {
+            method: 'POST',
+            headers,
+            body: JSON.stringify({ package_id: packageId }),
+        });
+
+        if (!response.ok) {
+            let errorMessage = '下单失败';
+            try {
+                const errorData = await response.json();
+                errorMessage = errorData.message || errorData.error || errorMessage;
+            } catch {
+                errorMessage = `下单失败，HTTP ${response.status}`;
+            }
+            if (response.status === 401) {
+                useAuthStore.getState().logout();
+            }
+            throw new Error(errorMessage);
+        }
+
+        const qrBlob = await response.blob();
+        const outTradeNo =
+            response.headers.get('x-out-trade-no') ||
+            response.headers.get('x-trade-no') ||
+            response.headers.get('out-trade-no') ||
+            null;
+        return { qrBlob, outTradeNo };
+    },
+
+    getOrderStatus: (outTradeNo: string) =>
+        request<OrderStatusResponse>(`/api/recharge/orders/${encodeURIComponent(outTradeNo)}/status`),
 };

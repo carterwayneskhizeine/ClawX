@@ -728,6 +728,44 @@ export async function syncBrowserConfigToOpenClaw(): Promise<void> {
 }
 
 /**
+ * Sync verbose logging configuration to ~/.openclaw/openclaw.json.
+ * When enabled, sets logging.level to 'debug' and logging.file to the specified path.
+ * When disabled, removes the logging configuration.
+ */
+export async function syncLoggingConfigToOpenClaw(
+  enabled: boolean,
+  logFilePath?: string
+): Promise<void> {
+  const config = await readOpenClawJson();
+
+  if (enabled && logFilePath) {
+    config.logging = {
+      file: logFilePath,
+      level: 'trace',
+      consoleLevel: 'info',
+      consoleStyle: 'pretty',
+    };
+    // Enable diagnostics for more detailed tracing
+    config.diagnostics = {
+      enabled: true,
+    };
+    console.log(`Synced logging config to openclaw.json (file=${logFilePath}, level=trace, diagnostics=true)`);
+  } else {
+    // Remove logging config if it exists
+    if ('logging' in config) {
+      delete config.logging;
+      console.log('Removed logging config from openclaw.json');
+    }
+    // Also remove diagnostics config
+    if ('diagnostics' in config) {
+      delete config.diagnostics;
+    }
+  }
+
+  await writeOpenClawJson(config);
+}
+
+/**
  * Update a provider entry in every discovered agent's models.json.
  */
 export async function updateAgentModelProvider(

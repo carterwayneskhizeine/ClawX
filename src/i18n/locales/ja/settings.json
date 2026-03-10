@@ -187,6 +187,8 @@
     "gatewayTokenDesc": "Control UI の設定に求められた場合、これを貼り付けてください",
     "tokenUnavailable": "トークンが利用できません",
     "tokenCopied": "ゲートウェイトークンをコピーしました",
+    "verboseLogging": "詳細ログ",
+    "verboseLoggingDesc": "OpenClaw の詳細ログを D:\\TheClaw\\logs に出力",
     "cli": "OpenClaw CLI",
     "cliDesc": "PATH を変更せずに OpenClaw を実行するコマンドをコピー。",
     "cliPowershell": "PowerShell コマンド。",

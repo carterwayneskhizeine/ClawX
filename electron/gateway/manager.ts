@@ -30,7 +30,7 @@ import {
   buildDeviceAuthPayload,
   type DeviceIdentity,
 } from '../utils/device-identity';
-import { syncGatewayTokenToConfig, syncBrowserConfigToOpenClaw, sanitizeOpenClawConfig } from '../utils/openclaw-auth';
+import { syncGatewayTokenToConfig, syncBrowserConfigToOpenClaw, sanitizeOpenClawConfig, syncLoggingConfigToOpenClaw } from '../utils/openclaw-auth';
 import { buildProxyEnv, resolveProxySettings } from '../utils/proxy';
 import { syncProxyConfigToOpenClaw } from '../utils/openclaw-proxy';
 import { shouldAttemptConfigAutoRepair } from './startup-recovery';
@@ -1212,6 +1212,16 @@ export class GatewayManager extends EventEmitter {
       logger.warn('Failed to sync browser config to openclaw.json:', err);
     }
 
+    // Sync verbose logging configuration
+    const verboseLogging = appSettings.openclawVerboseLogging ?? false;
+    const verboseLogDir = 'D:\\TheClaw\\logs';
+    const logFilePath = path.join(verboseLogDir, 'openclaw.log');
+    try {
+      await syncLoggingConfigToOpenClaw(verboseLogging, logFilePath);
+    } catch (err) {
+      logger.warn('Failed to sync logging config to openclaw.json:', err);
+    }
+
     // utilityProcess.fork() works for both dev and packaged — no ELECTRON_RUN_AS_NODE needed.
     if (!existsSync(entryScript)) {
       const errMsg = `OpenClaw entry script not found at: ${entryScript}`;
@@ -1220,6 +1230,13 @@ export class GatewayManager extends EventEmitter {
     }
 
     const gatewayArgs = ['gateway', '--port', String(this.status.port), '--token', gatewayToken, '--allow-unconfigured'];
+
+    // Add verbose logging args if configured (already declared above)
+    if (verboseLogging) {
+      gatewayArgs.push('--verbose');
+      gatewayArgs.push('--log-level', 'trace');
+    }
+
     const mode = app.isPackaged ? 'packaged' : 'dev';
 
     // Resolve bundled bin path for uv
@@ -1288,8 +1305,20 @@ export class GatewayManager extends EventEmitter {
     const uvEnv = await getUvMirrorEnv();
     const proxyEnv = buildProxyEnv(appSettings);
     const resolvedProxy = resolveProxySettings(appSettings);
+    // Ensure verbose logging directory exists (verboseLogDir already declared above)
+    if (verboseLogging) {
+      try {
+        const { mkdirSync } = require('fs');
+        if (!existsSync(verboseLogDir)) {
+          mkdirSync(verboseLogDir, { recursive: true });
+        }
+      } catch (err) {
+        logger.warn('Failed to create verbose log directory:', err);
+      }
+    }
+
     logger.info(
-      `Starting Gateway process (mode=${mode}, port=${this.status.port}, entry="${entryScript}", args="${this.sanitizeSpawnArgs(gatewayArgs).join(' ')}", cwd="${openclawDir}", bundledBin=${binPathExists ? 'yes' : 'no'}, providerKeys=${loadedProviderKeyCount}, proxy=${appSettings.proxyEnabled ? `http=${resolvedProxy.httpProxy || '-'}, https=${resolvedProxy.httpsProxy || '-'}, all=${resolvedProxy.allProxy || '-'}` : 'disabled'})`
+      `Starting Gateway process (mode=${mode}, port=${this.status.port}, entry="${entryScript}", args="${this.sanitizeSpawnArgs(gatewayArgs).join(' ')}", cwd="${openclawDir}", bundledBin=${binPathExists ? 'yes' : 'no'}, providerKeys=${loadedProviderKeyCount}, proxy=${appSettings.proxyEnabled ? `http=${resolvedProxy.httpProxy || '-'}, https=${resolvedProxy.httpsProxy || '-'}, all=${resolvedProxy.allProxy || '-'}` : 'disabled'}, verboseLogging=${verboseLogging})`
     );
     this.lastSpawnSummary = `mode=${mode}, entry="${entryScript}", args="${this.sanitizeSpawnArgs(gatewayArgs).join(' ')}", cwd="${openclawDir}"`;
 
@@ -1311,6 +1340,10 @@ export class GatewayManager extends EventEmitter {
         OPENCLAW_HOME: getOpenClawHomeDir(),
         // Prevent OpenClaw from respawning itself inside the utility process
         OPENCLAW_NO_RESPAWN: '1',
+        // Verbose logging level (file path is configured via openclaw.json)
+        ...(verboseLogging && {
+          OPENCLAW_LOG_LEVEL: 'trace',
+        }),
       };
 
       // Inject fetch preload so OpenRouter requests carry ClawX headers.

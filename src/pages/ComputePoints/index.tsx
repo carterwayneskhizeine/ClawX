@@ -1,10 +1,14 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import {
     Zap,
     History,
     CreditCard,
     CheckCircle2,
+    Loader2,
+    Smartphone,
+    ChevronLeft,
+    ChevronRight,
 } from 'lucide-react';
 import {
     XAxis,
@@ -33,16 +37,9 @@ import {
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { authApi, type ComputeBalanceResponse, type ComputeLedgerItem, type RechargePackage } from '@/lib/auth-api';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 const ITEMS_PER_PAGE = 10;
-
-const MOCK_PACKAGES: RechargePackage[] = [
-    { package_id: 'pkg_1', name: '体验套餐', original_price_cents: 990, current_price_cents: 990, compute_amount: 1000 },
-    { package_id: 'pkg_2', name: '进阶套餐', original_price_cents: 3900, current_price_cents: 3900, compute_amount: 4000 },
-    { package_id: 'pkg_3', name: '高级套餐', original_price_cents: 9900, current_price_cents: 9900, compute_amount: 10300 },
-    { package_id: 'pkg_4', name: '专业套餐', original_price_cents: 19900, current_price_cents: 19900, compute_amount: 21000 },
-];
+const POLL_INTERVAL_MS = 2000;
 
 function formatDate(unixSeconds: number): string {
     return new Date(unixSeconds * 1000).toLocaleString('zh-CN', {
@@ -50,6 +47,8 @@ function formatDate(unixSeconds: number): string {
         hour: '2-digit', minute: '2-digit',
     });
 }
+
+type PaymentState = 'idle' | 'creating' | 'polling' | 'success' | 'failed';
 
 export function ComputePoints() {
     const [showRecharge, setShowRecharge] = useState(false);
@@ -63,6 +62,12 @@ export function ComputePoints() {
     const [currentPage, setCurrentPage] = useState(1);
     const [loadingBalance, setLoadingBalance] = useState(true);
     const [loadingLedger, setLoadingLedger] = useState(true);
+    const [loadingPackages, setLoadingPackages] = useState(true);
+
+    // Payment flow state
+    const [paymentState, setPaymentState] = useState<PaymentState>('idle');
+    const [qrImageUrl, setQrImageUrl] = useState<string | null>(null);
+    const pollTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
     // Chart data: aggregate ledger by day
     const chartData = useMemo(() => {
@@ -95,7 +100,11 @@ export function ComputePoints() {
     }, [currentPage]);
 
     useEffect(() => {
-        setPackages(MOCK_PACKAGES);
+        setLoadingPackages(true);
+        authApi.getRechargePackages()
+            .then((res) => setPackages(res.items))
+            .catch((err) => toast.error('获取套餐失败: ' + err.message))
+            .finally(() => setLoadingPackages(false));
     }, []);
 
     useEffect(() => {
@@ -110,10 +119,67 @@ export function ComputePoints() {
     const totalPages = Math.ceil(ledgerTotal / ITEMS_PER_PAGE);
     const selectedPackage = packages.find(p => p.package_id === selectedPlan);
 
-    const handleRecharge = () => {
-        toast.info('充值功能正在对接中，敬请期待');
+    const stopPolling = useCallback(() => {
+        if (pollTimerRef.current !== null) {
+            clearInterval(pollTimerRef.current);
+            pollTimerRef.current = null;
+        }
+    }, []);
+
+    const resetPaymentState = useCallback(() => {
+        stopPolling();
+        if (qrImageUrl) URL.revokeObjectURL(qrImageUrl);
+        setQrImageUrl(null);
+        setPaymentState('idle');
+    }, [stopPolling, qrImageUrl]);
+
+    const handleCloseRecharge = useCallback(() => {
+        resetPaymentState();
         setShowRecharge(false);
         setSelectedPlan(null);
+    }, [resetPaymentState]);
+
+    const handleRecharge = async () => {
+        if (!selectedPlan) return;
+        setPaymentState('creating');
+
+        try {
+            const { qrBlob, outTradeNo: tradeNo } = await authApi.createRechargeOrderWithQR(selectedPlan);
+            const objectUrl = URL.createObjectURL(qrBlob);
+            setQrImageUrl(objectUrl);
+
+            if (!tradeNo) {
+                toast.error('订单创建成功，但无法获取订单号以轮询状态，请刷新后查看充值记录');
+                setPaymentState('polling');
+                return;
+            }
+
+            setPaymentState('polling');
+
+            pollTimerRef.current = setInterval(async () => {
+                try {
+                    const status = await authApi.getOrderStatus(tradeNo);
+                    if (status.status === 'success') {
+                        stopPolling();
+                        setPaymentState('success');
+                        toast.success('充值成功！算力积分已到账');
+                        // Refresh balance
+                        authApi.getComputeBalance()
+                            .then(setBalance)
+                            .catch(() => {});
+                    } else if (status.status === 'failed' || status.status === 'closed') {
+                        stopPolling();
+                        setPaymentState('failed');
+                        toast.error('支付失败或订单已关闭，请重新充值');
+                    }
+                } catch {
+                    // Network errors during poll — keep retrying silently
+                }
+            }, POLL_INTERVAL_MS);
+        } catch (err: any) {
+            setPaymentState('failed');
+            toast.error('下单失败: ' + (err.message || '请稍后重试'));
+        }
     };
 
     return (
@@ -307,93 +373,177 @@ export function ComputePoints() {
             </Card>
 
             {/* Recharge Modal */}
-            <Dialog open={showRecharge} onOpenChange={setShowRecharge}>
+            <Dialog open={showRecharge} onOpenChange={handleCloseRecharge}>
                 <DialogContent className="p-0 border-none max-w-[576px] rounded-[1.25rem] overflow-hidden">
                     <div className="px-8 py-5 border-b border-slate-50 dark:border-white/5 dark:bg-[#141414]">
                         <h4 className="text-xl font-bold text-slate-900 dark:text-slate-100 tracking-tight">算力积分充值</h4>
-                        <p className="text-sm text-slate-500 dark:text-slate-500">选择适合您的套餐，即刻提升效率</p>
+                        <p className="text-sm text-slate-500 dark:text-slate-500">
+                            {paymentState === 'idle' ? '选择适合您的套餐，即刻提升效率' :
+                             paymentState === 'creating' ? '正在创建订单...' :
+                             paymentState === 'polling' ? '请使用微信扫码完成支付' :
+                             paymentState === 'success' ? '充值成功！' :
+                             '支付失败，请重试'}
+                        </p>
                     </div>
 
-                    <div className="p-6 grid grid-cols-2 gap-4 dark:bg-[#141414]">
-                        {packages.length === 0 ? (
-                            <div className="col-span-2 text-center text-slate-400 py-8">套餐加载中...</div>
-                        ) : packages.map((plan, idx) => (
-                            <div
-                                key={plan.package_id}
-                                onClick={() => setSelectedPlan(plan.package_id)}
-                                className={cn(
-                                    "p-4 rounded-2xl border transition-all duration-200 cursor-pointer relative group",
-                                    selectedPlan === plan.package_id
-                                        ? 'border-blue-500 bg-blue-50/20 dark:bg-blue-900/20'
-                                        : 'border-slate-100 dark:border-white/5 bg-white dark:bg-[#1c1c1c] hover:border-blue-200 dark:hover:border-blue-700'
-                                )}
-                            >
-                                {idx === 2 && (
-                                    <div className="absolute bottom-0 right-0 bg-gradient-to-tr from-orange-500 to-amber-400 text-white text-[10px] font-bold px-3 py-1 rounded-tl-2xl rounded-br-2xl shadow-sm z-10">
-                                        推荐
+                    {/* Package selection */}
+                    {paymentState === 'idle' && (
+                        <>
+                            <div className="p-6 grid grid-cols-2 gap-4 dark:bg-[#141414]">
+                                {loadingPackages ? (
+                                    <div className="col-span-2 flex items-center justify-center py-10">
+                                        <Loader2 className="w-6 h-6 animate-spin text-slate-400" />
+                                        <span className="ml-2 text-slate-400">套餐加载中...</span>
                                     </div>
-                                )}
-                                <div className="flex justify-between items-start mb-2">
-                                    <div className={cn(
-                                        "w-8 h-8 rounded-xl flex items-center justify-center",
-                                        selectedPlan === plan.package_id ? 'bg-blue-500 text-white' : 'bg-slate-50 dark:bg-white/5 text-slate-400 dark:text-slate-500'
-                                    )}>
-                                        <Zap className="w-5 h-5 fill-current" />
+                                ) : packages.length === 0 ? (
+                                    <div className="col-span-2 text-center text-slate-400 py-8">暂无可用套餐</div>
+                                ) : packages.map((plan, idx) => (
+                                    <div
+                                        key={plan.package_id}
+                                        onClick={() => setSelectedPlan(plan.package_id)}
+                                        className={cn(
+                                            "p-4 rounded-2xl border transition-all duration-200 cursor-pointer relative group",
+                                            selectedPlan === plan.package_id
+                                                ? 'border-blue-500 bg-blue-50/20 dark:bg-blue-900/20'
+                                                : 'border-slate-100 dark:border-white/5 bg-white dark:bg-[#1c1c1c] hover:border-blue-200 dark:hover:border-blue-700'
+                                        )}
+                                    >
+                                        {idx === 2 && (
+                                            <div className="absolute bottom-0 right-0 bg-gradient-to-tr from-orange-500 to-amber-400 text-white text-[10px] font-bold px-3 py-1 rounded-tl-2xl rounded-br-2xl shadow-sm z-10">
+                                                推荐
+                                            </div>
+                                        )}
+                                        <div className="flex justify-between items-start mb-2">
+                                            <div className={cn(
+                                                "w-8 h-8 rounded-xl flex items-center justify-center",
+                                                selectedPlan === plan.package_id ? 'bg-blue-500 text-white' : 'bg-slate-50 dark:bg-white/5 text-slate-400 dark:text-slate-500'
+                                            )}>
+                                                <Zap className="w-5 h-5 fill-current" />
+                                            </div>
+                                            {selectedPlan === plan.package_id && (
+                                                <CheckCircle2 className="text-blue-500 w-5 h-5" />
+                                            )}
+                                        </div>
+                                        <div className="space-y-1">
+                                            <p className="text-2xl font-bold text-slate-900 dark:text-slate-100 tracking-tight">
+                                                {plan.compute_amount.toLocaleString()}
+                                            </p>
+                                            <p className="text-[10px] text-slate-400 dark:text-slate-600 font-bold uppercase tracking-wider">算力积分</p>
+                                        </div>
+                                        <div className="mt-3 flex items-baseline space-x-1.5">
+                                            <span className="text-base font-bold text-slate-900 dark:text-slate-100">
+                                                ¥{(plan.current_price_cents / 100).toFixed(2)}
+                                            </span>
+                                            {plan.original_price_cents > plan.current_price_cents && (
+                                                <span className="text-xs text-slate-300 dark:text-slate-700 line-through font-medium">
+                                                    ¥{(plan.original_price_cents / 100).toFixed(2)}
+                                                </span>
+                                            )}
+                                        </div>
                                     </div>
-                                    {selectedPlan === plan.package_id && (
-                                        <CheckCircle2 className="text-blue-500 w-5 h-5" />
-                                    )}
-                                </div>
-                                <div className="space-y-1">
-                                    <p className="text-2xl font-bold text-slate-900 dark:text-slate-100 tracking-tight">
-                                        {plan.compute_amount.toLocaleString()}
-                                    </p>
-                                    <p className="text-[10px] text-slate-400 dark:text-slate-600 font-bold uppercase tracking-wider">算力积分</p>
-                                </div>
-                                <div className="mt-3 flex items-baseline space-x-1.5">
-                                    <span className="text-base font-bold text-slate-900 dark:text-slate-100">
-                                        ¥{(plan.current_price_cents / 100).toFixed(2)}
-                                    </span>
-                                    {plan.original_price_cents > plan.current_price_cents && (
-                                        <span className="text-xs text-slate-300 dark:text-slate-700 line-through font-medium">
-                                            ¥{(plan.original_price_cents / 100).toFixed(2)}
+                                ))}
+                            </div>
+
+                            <div className="px-8 py-5 bg-slate-50/80 dark:bg-[#1c1c1c]/80 border-t border-slate-100 dark:border-white/5 flex items-center justify-between">
+                                <div className="flex items-baseline space-x-3">
+                                    <span className="text-slate-500 dark:text-slate-400 text-sm font-medium">应付金额:</span>
+                                    <div className="flex items-baseline space-x-1">
+                                        <span className="text-blue-600 dark:text-blue-400 text-sm font-bold">¥</span>
+                                        <span className="text-3xl font-bold text-blue-600 dark:text-blue-400 tracking-tight">
+                                            {selectedPackage
+                                                ? (selectedPackage.current_price_cents / 100).toFixed(2)
+                                                : '0.00'}
                                         </span>
-                                    )}
+                                    </div>
+                                </div>
+
+                                <div className="flex space-x-3">
+                                    <Button
+                                        variant="outline"
+                                        onClick={handleCloseRecharge}
+                                        className="rounded-xl font-medium px-6"
+                                    >
+                                        取消
+                                    </Button>
+                                    <Button
+                                        disabled={!selectedPlan}
+                                        onClick={handleRecharge}
+                                        className="rounded-xl font-bold px-8 shadow-sm"
+                                    >
+                                        立即支付
+                                    </Button>
                                 </div>
                             </div>
-                        ))}
-                    </div>
+                        </>
+                    )}
 
-                    <div className="px-8 py-5 bg-slate-50/80 dark:bg-[#1c1c1c]/80 border-t border-slate-100 dark:border-white/5 flex items-center justify-between">
-                        <div className="flex items-baseline space-x-3">
-                            <span className="text-slate-500 dark:text-slate-400 text-sm font-medium">应付金额:</span>
-                            <div className="flex items-baseline space-x-1">
-                                <span className="text-blue-600 dark:text-blue-400 text-sm font-bold">¥</span>
-                                <span className="text-3xl font-bold text-blue-600 dark:text-blue-400 tracking-tight">
-                                    {selectedPackage
-                                        ? (selectedPackage.current_price_cents / 100).toFixed(2)
-                                        : '0.00'}
-                                </span>
+                    {/* QR / payment screen */}
+                    {paymentState !== 'idle' && (
+                        <div className="flex flex-col items-center justify-center py-10 gap-6 dark:bg-[#141414]">
+                            {paymentState === 'creating' && (
+                                <div className="flex flex-col items-center gap-4">
+                                    <Loader2 className="w-12 h-12 animate-spin text-blue-500" />
+                                    <p className="text-slate-500 dark:text-slate-400">正在生成付款码...</p>
+                                </div>
+                            )}
+
+                            {(paymentState === 'polling' || paymentState === 'success') && qrImageUrl && (
+                                <div className="flex flex-col items-center gap-4">
+                                    <div className="relative">
+                                        <img
+                                            src={qrImageUrl}
+                                            alt="微信支付二维码"
+                                            className={cn(
+                                                "w-48 h-48 rounded-2xl border-4 border-slate-100 dark:border-white/10 shadow-lg",
+                                                paymentState === 'success' && "opacity-30"
+                                            )}
+                                        />
+                                        {paymentState === 'success' && (
+                                            <div className="absolute inset-0 flex items-center justify-center">
+                                                <CheckCircle2 className="w-20 h-20 text-green-500" />
+                                            </div>
+                                        )}
+                                    </div>
+                                    {paymentState === 'polling' && (
+                                        <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400 text-sm">
+                                            <Smartphone className="w-4 h-4" />
+                                            <span>请使用微信扫码支付</span>
+                                            <Loader2 className="w-3 h-3 animate-spin" />
+                                        </div>
+                                    )}
+                                    {paymentState === 'success' && (
+                                        <p className="text-green-500 font-bold text-lg">充值成功！算力积分已到账</p>
+                                    )}
+                                    <div className="flex items-center gap-2 text-xs text-slate-400 dark:text-slate-600">
+                                        <span>金额：¥{selectedPackage ? (selectedPackage.current_price_cents / 100).toFixed(2) : '-'}</span>
+                                        <span>·</span>
+                                        <span>算力：{selectedPackage ? selectedPackage.compute_amount.toLocaleString() : '-'} 积分</span>
+                                    </div>
+                                </div>
+                            )}
+
+                            {paymentState === 'failed' && (
+                                <div className="flex flex-col items-center gap-4">
+                                    <div className="w-16 h-16 rounded-full bg-red-50 dark:bg-red-900/20 flex items-center justify-center">
+                                        <span className="text-3xl">✕</span>
+                                    </div>
+                                    <p className="text-red-500 font-medium">支付失败，请重新充值</p>
+                                </div>
+                            )}
+
+                            <div className="flex gap-3">
+                                {paymentState === 'success' ? (
+                                    <Button onClick={handleCloseRecharge} className="rounded-xl font-bold px-8">
+                                        完成
+                                    </Button>
+                                ) : (
+                                    <Button variant="outline" onClick={handleCloseRecharge} className="rounded-xl font-medium px-6">
+                                        {paymentState === 'failed' ? '关闭' : '取消支付'}
+                                    </Button>
+                                )}
                             </div>
                         </div>
-
-                        <div className="flex space-x-3">
-                            <Button
-                                variant="outline"
-                                onClick={() => setShowRecharge(false)}
-                                className="rounded-xl font-medium px-6"
-                            >
-                                取消
-                            </Button>
-                            <Button
-                                disabled={!selectedPlan}
-                                onClick={handleRecharge}
-                                className="rounded-xl font-bold px-8 shadow-sm"
-                            >
-                                立即支付
-                            </Button>
-                        </div>
-                    </div>
+                    )}
                 </DialogContent>
             </Dialog>
         </div>

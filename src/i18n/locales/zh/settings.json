@@ -188,6 +188,8 @@
     "gatewayTokenDesc": "如果需要，将此粘贴到控制台设置中",
     "tokenUnavailable": "令牌不可用",
     "tokenCopied": "网关令牌已复制",
+    "verboseLogging": "详细日志",
+    "verboseLoggingDesc": "启用 OpenClaw 详细日志输出到 D:\\TheClaw\\logs",
     "cli": "OpenClaw CLI",
     "cliDesc": "复制命令以运行 OpenClaw，无需修改 PATH。",
     "cliPowershell": "PowerShell 命令。",
