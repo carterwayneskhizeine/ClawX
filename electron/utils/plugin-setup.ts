@@ -130,7 +130,7 @@ async function ensurePluginConfig(): Promise<void> {
   }
 
   if (!config.plugins.entries[PLUGIN_NAME]) {
-    const SILICONFLOW_API_KEY = 'sk-fpmqnxzbkjzojyaaymapfekdhrnmdspwnrbbyxwlhqywsqog';
+    const SILICONFLOW_API_KEY = '';
     config.plugins.entries[PLUGIN_NAME] = {
       enabled: true,
       config: {
