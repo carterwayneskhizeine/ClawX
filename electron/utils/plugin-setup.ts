@@ -97,9 +97,15 @@ async function runNpmInstall(): Promise<void> {
   logger.info(`${PLUGIN_NAME} npm install completed`);
 }
 
+// Set to false to disable memory-lancedb-pro (e.g. when no API key is configured).
+// When false, the plugin entry is force-disabled so the Gateway config stays valid.
+const PLUGIN_ENABLED = false;
+
 /**
  * Add the plugin load path, entry config, and memory slot mapping to openclaw.json.
  * Only writes what is missing — never overwrites existing user configuration.
+ * When PLUGIN_ENABLED=false, force-disables any existing entry so the Gateway
+ * does not reject an invalid (empty apiKey) config.
  */
 async function ensurePluginConfig(): Promise<void> {
   const pluginPath = getPluginTargetDir();
@@ -122,11 +128,22 @@ async function ensurePluginConfig(): Promise<void> {
   // what HOME resolves to (the gateway sets HOME=D:\TheClaw but CLI tools may
   // not, causing C:\Users\... to be used instead).
   const existingEntry = config.plugins.entries[PLUGIN_NAME] as
-    | { config?: { dbPath?: string } }
+    | { enabled?: boolean; config?: { dbPath?: string } }
     | undefined;
   if (existingEntry?.config?.dbPath?.startsWith('~')) {
     existingEntry.config.dbPath = join(getOpenClawConfigDir(), 'memory', 'lancedb-pro');
     logger.info(`${PLUGIN_NAME} migrated tilde dbPath to absolute path`);
+  }
+
+  // If the plugin is disabled, force-disable any existing entry so the Gateway
+  // does not fail config validation (empty apiKey is invalid when enabled=true).
+  if (!PLUGIN_ENABLED) {
+    if (existingEntry && existingEntry.enabled !== false) {
+      existingEntry.enabled = false;
+      logger.info(`${PLUGIN_NAME} force-disabled in openclaw.json (PLUGIN_ENABLED=false)`);
+      await writeOpenClawConfig(config);
+    }
+    return;
   }
 
   if (!config.plugins.entries[PLUGIN_NAME]) {
