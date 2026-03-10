@@ -167,12 +167,12 @@ function App() {
     initGateway();
   }, [initGateway]);
 
-  // Redirect to setup wizard if not complete
-  useEffect(() => {
-    if (!setupComplete && !location.pathname.startsWith('/setup')) {
-      navigate('/setup');
-    }
-  }, [setupComplete, location.pathname, navigate]);
+  // Note: Setup wizard disabled - directly show login for new users
+  // useEffect(() => {
+  //   if (!setupComplete && !location.pathname.startsWith('/setup')) {
+  //     navigate('/setup');
+  //   }
+  // }, [setupComplete, location.pathname, navigate]);
 
   // Listen for navigation events from main process
   useEffect(() => {
@@ -260,7 +260,6 @@ function App() {
     return (
       <LoginModal
         onSuccess={(token) => setToken(token)}
-        onLocalMode={() => setLocalMode(true)}
       />
     );
   }

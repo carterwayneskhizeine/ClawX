@@ -5,10 +5,9 @@ import { useAuthStore } from '@/stores/auth';
 
 interface LoginModalProps {
     onSuccess: (token: string) => void;
-    onLocalMode: () => void;
 }
 
-export function LoginModal({ onSuccess, onLocalMode }: LoginModalProps) {
+export function LoginModal({ onSuccess }: LoginModalProps) {
     const [mode, setMode] = useState<'login' | 'register'>('login');
     const [showAgreement, setShowAgreement] = useState(false);
     const [agreed, setAgreed] = useState(false);
@@ -163,14 +162,6 @@ export function LoginModal({ onSuccess, onLocalMode }: LoginModalProps) {
 
                         <button type="submit" className="login-submit-btn" disabled={loading}>
                             {loading ? '处理中...' : (mode === 'login' ? '登 录' : '注 册')}
-                        </button>
-
-                        <button
-                            type="button"
-                            className="login-link-btn w-full mt-4 text-center opacity-60 hover:opacity-100"
-                            onClick={onLocalMode}
-                        >
-                            继续使用本地模式 (无需登录)
                         </button>
                     </form>
                 </div>
