@@ -342,18 +342,18 @@ export function ChatInput({ onSend, onStop, disabled = false, sending = false }:
         )}
 
         {/* Input Row */}
-        <div className={`flex items-end gap-2 ${dragOver ? 'ring-2 ring-primary rounded-lg' : ''}`}>
+        <div className={`flex items-end gap-3 bg-muted/40 rounded-[2rem] p-2 border transition-all focus-within:border-primary/50 focus-within:bg-background focus-within:shadow-md ${dragOver ? 'ring-2 ring-primary/50 border-primary' : 'border-border'}`}>
 
           {/* Attach Button */}
           <Button
             variant="ghost"
             size="icon"
-            className="shrink-0 h-[44px] w-[44px]"
+            className="shrink-0 h-10 w-10 rounded-full hover:bg-muted mb-0.5 ml-0.5"
             onClick={pickFiles}
             disabled={disabled || sending}
             title="Attach files"
           >
-            <Paperclip className="h-4 w-4" />
+            <Paperclip className="h-5 w-5 text-muted-foreground" />
           </Button>
 
           {/* Textarea */}
@@ -370,9 +370,9 @@ export function ChatInput({ onSend, onStop, disabled = false, sending = false }:
                 isComposingRef.current = false;
               }}
               onPaste={handlePaste}
-              placeholder={disabled ? 'Gateway not connected...' : 'Message (Enter to send, Shift+Enter for new line)'}
+              placeholder={disabled ? 'Gateway not connected...' : 'Message...'}
               disabled={disabled}
-              className="min-h-[44px] max-h-[200px] resize-none pr-4"
+              className="min-h-[44px] max-h-[200px] resize-none border-none shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 bg-transparent py-3 text-sm font-medium pr-4"
               rows={1}
             />
           </div>
@@ -382,7 +382,7 @@ export function ChatInput({ onSend, onStop, disabled = false, sending = false }:
             onClick={sending ? handleStop : handleSend}
             disabled={sending ? !canStop : !canSend}
             size="icon"
-            className="shrink-0 h-[44px] w-[44px]"
+            className={`shrink-0 h-11 w-11 rounded-2xl mb-0.5 mr-0.5 transition-all duration-300 ${(!canSend && !sending) ? 'scale-95 opacity-80' : 'scale-100 shadow-md'}`}
             variant={sending ? 'destructive' : 'default'}
             title={sending ? 'Stop' : 'Send'}
           >
@@ -393,13 +393,15 @@ export function ChatInput({ onSend, onStop, disabled = false, sending = false }:
             )}
           </Button>
         </div>
-        <div className="mt-1 flex items-center justify-between gap-2 text-xs text-muted-foreground">
-          <span>Tip: switch sessions from the sidebar to keep context clean.</span>
+        <div className="mt-2 text-center relative flex flex-col items-center">
+          <span className="text-[10px] font-bold text-muted-foreground/60 uppercase tracking-[0.15em]">
+            Enter 发送, Shift+Enter 换行
+          </span>
           {hasFailedAttachments && (
             <Button
               variant="link"
               size="sm"
-              className="h-auto p-0 text-xs"
+              className="h-auto p-0 text-xs text-destructive mt-1"
               onClick={() => {
                 setAttachments((prev) => prev.filter((att) => att.status !== 'error'));
                 void pickFiles();
