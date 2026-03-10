@@ -2,9 +2,19 @@ import React, { useState, useEffect } from 'react';
 import './login.css';
 import { authApi } from '@/lib/auth-api';
 import { useAuthStore } from '@/stores/auth';
+import { TitleBar } from '@/components/layout/TitleBar';
 
 interface LoginModalProps {
     onSuccess: (token: string) => void;
+}
+
+function AgreementRule({ number, text }: { number: number, text: string }) {
+    return (
+        <div className="login-rule-item">
+            <div className="login-rule-number">{number}</div>
+            <p>{text}</p>
+        </div>
+    );
 }
 
 export function LoginModal({ onSuccess }: LoginModalProps) {
@@ -60,7 +70,9 @@ export function LoginModal({ onSuccess }: LoginModalProps) {
     };
 
     return (
-        <div className="login-page">
+        <>
+            <TitleBar />
+            <div className="login-page">
             <div className="login-card">
                 {/* Left Section: QR Code */}
                 <div className="login-left">
@@ -197,14 +209,6 @@ export function LoginModal({ onSuccess }: LoginModalProps) {
                 </div>
             )}
         </div>
-    );
-}
-
-function AgreementRule({ number, text }: { number: number, text: string }) {
-    return (
-        <div className="login-rule-item">
-            <div className="login-rule-number">{number}</div>
-            <p>{text}</p>
-        </div>
+        </>
     );
 }
