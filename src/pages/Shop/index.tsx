@@ -41,11 +41,11 @@ export function Shop() {
     return (
         <div className="relative w-full min-h-[80vh] animate-in fade-in slide-in-from-bottom-4 duration-500">
             {/* Development Overlay */}
-            <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-background/40 backdrop-blur-md rounded-2xl">
-                <div className="flex flex-col items-center gap-4 bg-background/90 p-10 rounded-3xl shadow-2xl border border-border/50 animate-in zoom-in-95 duration-500">
-                    <span className="text-6xl drop-shadow-md">🚧</span>
-                    <h2 className="text-3xl font-black tracking-tight text-foreground">功能正在开发中</h2>
-                    <p className="text-muted-foreground text-center max-w-sm">
+            <div className="absolute inset-0 z-50 flex flex-col items-center justify-start pt-24 bg-background/40 backdrop-blur-md rounded-2xl">
+                <div className="flex flex-col items-center gap-3 bg-background/95 px-12 py-8 rounded-3xl shadow-2xl border border-border/50 animate-in slide-in-from-top-8 duration-500">
+                    <span className="text-5xl drop-shadow-sm mb-1">🚧</span>
+                    <h2 className="text-2xl font-black tracking-tight text-foreground">功能正在开发中</h2>
+                    <p className="text-muted-foreground text-center text-sm max-w-md">
                         工程师们正在加班加点为您构建插件技能商店，为您提供更丰富的能力扩展。敬请期待！
                     </p>
                 </div>
