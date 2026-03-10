@@ -242,7 +242,7 @@ export function Sidebar() {
           </div>
           {!sidebarCollapsed && (
             <span className="font-bold text-sm text-foreground tracking-wide whitespace-nowrap">
-              OPC数字员工智能助手
+              LinkClaw
             </span>
           )}
         </div>

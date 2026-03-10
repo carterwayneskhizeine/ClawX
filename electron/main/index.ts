@@ -108,7 +108,7 @@ function createWindow(): BrowserWindow {
     trafficLightPosition: isMac ? { x: 16, y: 16 } : undefined,
     frame: isMac,
     show: false,
-    title: 'OPC数字员工智能助手'
+    title: 'LinkClaw'
   });
 
   // Show window when ready to prevent visual flash

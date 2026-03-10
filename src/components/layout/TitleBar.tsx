@@ -51,7 +51,7 @@ function WindowsTitleBar() {
       <div className="no-drag flex items-center gap-2 pl-3">
         <img src={appIcon} alt="Dysense Icon" className="h-4 w-4" />
         <span className="text-xs font-medium text-muted-foreground select-none">
-          Dysense
+          LinkClaw
         </span>
         <span className="sr-only">OPC数字员工智能助手</span>
       </div>

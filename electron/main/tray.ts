@@ -23,7 +23,7 @@ function getIconsDir(): string {
 export function createTray(mainWindow: BrowserWindow): Tray {
   // Use platform-appropriate icon for system tray
   const iconsDir = getIconsDir();
-  
+
   // Use 16x16.png for the system tray as requested
   const iconPath = join(iconsDir, '16x16.png');
 
@@ -47,7 +47,7 @@ export function createTray(mainWindow: BrowserWindow): Tray {
   tray = new Tray(icon);
 
   // Set tooltip
-  tray.setToolTip('OPC数字员工智能助手');
+  tray.setToolTip('LinkClaw');
 
   const showWindow = () => {
     if (mainWindow.isDestroyed()) return;
@@ -58,7 +58,7 @@ export function createTray(mainWindow: BrowserWindow): Tray {
   // Create context menu
   const contextMenu = Menu.buildFromTemplate([
     {
-      label: 'Show Dysense',
+      label: '打开 LinkClaw',
       click: showWindow,
     },
     {
@@ -77,50 +77,9 @@ export function createTray(mainWindow: BrowserWindow): Tray {
     {
       type: 'separator',
     },
+
     {
-      label: 'Quick Actions',
-      submenu: [
-        {
-          label: 'Open Dashboard',
-          click: () => {
-            if (mainWindow.isDestroyed()) return;
-            mainWindow.show();
-            mainWindow.webContents.send('navigate', '/');
-          },
-        },
-        {
-          label: 'Open Chat',
-          click: () => {
-            if (mainWindow.isDestroyed()) return;
-            mainWindow.show();
-            mainWindow.webContents.send('navigate', '/chat');
-          },
-        },
-        {
-          label: 'Open Settings',
-          click: () => {
-            if (mainWindow.isDestroyed()) return;
-            mainWindow.show();
-            mainWindow.webContents.send('navigate', '/settings');
-          },
-        },
-      ],
-    },
-    {
-      type: 'separator',
-    },
-    {
-      label: 'Check for Updates...',
-      click: () => {
-        if (mainWindow.isDestroyed()) return;
-        mainWindow.webContents.send('update:check');
-      },
-    },
-    {
-      type: 'separator',
-    },
-    {
-      label: 'Quit Dysense',
+      label: '退出 LinkClaw',
       click: () => {
         app.quit();
       },
@@ -155,7 +114,7 @@ export function createTray(mainWindow: BrowserWindow): Tray {
  */
 export function updateTrayStatus(status: string): void {
   if (tray) {
-    tray.setToolTip(`OPC数字员工智能助手 - ${status}`);
+    tray.setToolTip(`LinkClaw - ${status}`);
   }
 }
 

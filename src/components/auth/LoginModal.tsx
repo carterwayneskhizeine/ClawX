@@ -180,7 +180,7 @@ export function LoginModal({ onSuccess }: LoginModalProps) {
                             <span>用户协议与使用须知</span>
                         </div>
                         <div className="login-modal-content">
-                            <h4>欢迎使用 OPC数字员工智能助手：</h4>
+                            <h4>欢迎使用 LinkClaw：</h4>
 
                             <AgreementRule number={1} text="本系统致力于为您提供专业、高效的数字员工管理服务。" />
                             <AgreementRule number={2} text="您的数据将严格遵循加密存储标准，我们不会在未授权的情况下访问您的私有数据。" />

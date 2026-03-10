@@ -129,9 +129,13 @@ function App() {
         const { newapi_base_url, newapi_token } = await authApi.getNewApiToken();
         if (!newapi_base_url || !newapi_token) return;
 
-        const baseUrl = newapi_base_url.endsWith('/v1')
+        // Ensure URL ends with /v1/message
+        let baseUrl = newapi_base_url.endsWith('/v1')
           ? newapi_base_url
           : `${newapi_base_url}/v1`;
+        baseUrl = baseUrl.endsWith('/message')
+          ? baseUrl
+          : `${baseUrl}/message`;
 
         await invokeIpc('provider:save', {
           id: 'cloud-api',

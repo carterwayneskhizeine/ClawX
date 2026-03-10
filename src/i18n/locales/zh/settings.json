@@ -1,6 +1,6 @@
 {
   "title": "设置",
-  "subtitle": "配置您的 ClawX 体验",
+  "subtitle": "配置您的 LinkClaw 体验",
   "appearance": {
     "title": "外观",
     "description": "自定义外观和风格",
@@ -22,7 +22,7 @@
     "notRequired": "非必填",
     "empty": {
       "title": "未配置提供商",
-      "desc": "添加 AI 提供商以开始使用 ClawX",
+      "desc": "添加 AI 提供商以开始使用 LinkClaw",
       "cta": "添加您的第一个提供商"
     },
     "dialog": {
@@ -201,7 +201,7 @@
   },
   "about": {
     "title": "关于",
-    "appName": "ClawX",
+    "appName": "LinkClaw",
     "tagline": "图形化 AI 助手",
     "basedOn": "基于 OpenClaw",
     "version": "版本 {{version}}",
