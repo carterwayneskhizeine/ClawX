@@ -37,6 +37,13 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 const ITEMS_PER_PAGE = 10;
 
+const MOCK_PACKAGES: RechargePackage[] = [
+    { package_id: 'pkg_1', name: '体验套餐', original_price_cents: 990, current_price_cents: 990, compute_amount: 1000 },
+    { package_id: 'pkg_2', name: '进阶套餐', original_price_cents: 3900, current_price_cents: 3900, compute_amount: 4000 },
+    { package_id: 'pkg_3', name: '高级套餐', original_price_cents: 9900, current_price_cents: 9900, compute_amount: 10300 },
+    { package_id: 'pkg_4', name: '专业套餐', original_price_cents: 19900, current_price_cents: 19900, compute_amount: 21000 },
+];
+
 function formatDate(unixSeconds: number): string {
     return new Date(unixSeconds * 1000).toLocaleString('zh-CN', {
         year: 'numeric', month: '2-digit', day: '2-digit',
@@ -88,9 +95,7 @@ export function ComputePoints() {
     }, [currentPage]);
 
     useEffect(() => {
-        authApi.getRechargePackages()
-            .then((res) => setPackages(res.items))
-            .catch((err) => console.warn('获取充值套餐失败:', err));
+        setPackages(MOCK_PACKAGES);
     }, []);
 
     useEffect(() => {
