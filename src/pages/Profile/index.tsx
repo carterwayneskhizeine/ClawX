@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
     User,
     Camera,
@@ -12,7 +12,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Input } from '@/components/ui/input';
 import {
     Dialog,
@@ -22,17 +22,21 @@ import {
     DialogFooter
 } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
+import { useAuthStore } from '@/stores/auth';
+import { authApi } from '@/lib/auth-api';
 
 export function Profile() {
     const [showResetPassword, setShowResetPassword] = useState(false);
+    const user = useAuthStore((s) => s.user);
+    const setUser = useAuthStore((s) => s.setUser);
 
-    const MOCK_USER = {
-        username: 'Carter Wayne',
-        accountName: 'carter_nx_01',
-        organization: 'OpenClaw AI 科技有限公司',
-        email: 'carter@example.com',
-        avatar: 'https://picsum.photos/seed/clawx-profile/300'
-    };
+    useEffect(() => {
+        if (!user) {
+            authApi.getMe()
+                .then((info) => setUser(info))
+                .catch(console.error);
+        }
+    }, [user, setUser]);
 
     return (
         <div className="max-w-4xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-10">
@@ -51,8 +55,9 @@ export function Profile() {
                 <div className="px-8 pb-10 relative -mt-16 flex items-end justify-between">
                     <div className="relative group">
                         <Avatar className="h-[140px] w-[140px] rounded-[2rem] border-4 border-background shadow-2xl overflow-hidden">
-                            <AvatarImage src={MOCK_USER.avatar} className="object-cover" />
-                            <AvatarFallback className="text-4xl">CW</AvatarFallback>
+                            <AvatarFallback className="text-4xl">
+                                {user?.username?.charAt(0)?.toUpperCase() ?? 'U'}
+                            </AvatarFallback>
                         </Avatar>
                         <Button
                             size="icon"
@@ -79,11 +84,11 @@ export function Profile() {
                             </div>
 
                             <div className="p-6 bg-muted/30 rounded-[2rem] border border-muted/20 space-y-6">
-                                <InfoItem icon={User} label="用户名" value={MOCK_USER.username} />
+                                <InfoItem icon={User} label="用户名" value={user?.username ?? '-'} />
                                 <div className="h-px bg-muted/20 mx-2" />
-                                <InfoItem icon={IdCard} label="账号 ID" value={MOCK_USER.accountName} />
+                                <InfoItem icon={IdCard} label="账号 ID" value={user?.user_id ?? '-'} />
                                 <div className="h-px bg-muted/20 mx-2" />
-                                <InfoItem icon={Building2} label="所属组织" value={MOCK_USER.organization} />
+                                <InfoItem icon={Building2} label="所属组织" value={user?.org_name ?? '个人用户'} />
                             </div>
                         </div>
 

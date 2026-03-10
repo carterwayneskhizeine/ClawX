@@ -33,6 +33,8 @@ import { SysSettings } from './pages/SysSettings';
 import { Profile } from './pages/Profile';
 import { LoginModal } from './components/auth/LoginModal';
 import { useAuthStore } from './stores/auth';
+import { authApi } from './lib/auth-api';
+import { invokeIpc } from './lib/api-client';
 
 
 /**
@@ -117,6 +119,37 @@ function App() {
   const setLocalMode = useAuthStore((state) => state.setLocalMode);
 
   const isAuthenticated = !!token || isLocalMode;
+
+  // Sync cloud model config after login
+  useEffect(() => {
+    if (!token) return;
+
+    const syncCloudModels = async () => {
+      try {
+        const { newapi_base_url, newapi_token } = await authApi.getNewApiToken();
+        if (!newapi_base_url || !newapi_token) return;
+
+        const baseUrl = newapi_base_url.endsWith('/v1')
+          ? newapi_base_url
+          : `${newapi_base_url}/v1`;
+
+        await invokeIpc('provider:save', {
+          id: 'cloud-api',
+          name: '云端模型服务',
+          type: 'custom',
+          baseUrl,
+          model: 'kimi-k2.5',
+          enabled: true,
+        }, newapi_token);
+
+        console.log('[ClawX] Cloud model config synced');
+      } catch (err) {
+        console.warn('[ClawX] Failed to sync cloud model config:', err);
+      }
+    };
+
+    syncCloudModels();
+  }, [token]);
 
   useEffect(() => {
     initSettings();

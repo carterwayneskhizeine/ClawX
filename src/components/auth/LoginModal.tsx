@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import './login.css';
+import { authApi } from '@/lib/auth-api';
+import { useAuthStore } from '@/stores/auth';
 
 interface LoginModalProps {
     onSuccess: (token: string) => void;
@@ -29,21 +31,33 @@ export function LoginModal({ onSuccess, onLocalMode }: LoginModalProps) {
             return;
         }
 
+        if (!username || !password) {
+            setError('用户名或密码不能为空');
+            return;
+        }
+
         setLoading(true);
         setError('');
 
-        // Simulation of API call
-        setTimeout(() => {
-            setLoading(false);
-            // Mock success
-            if (username === 'admin' && password === 'admin') {
-                onSuccess('mock-jwt-token');
-            } else if (username && password) {
-                onSuccess('mock-jwt-token-guest');
+        try {
+            if (mode === 'register') {
+                const result = await authApi.register({
+                    username,
+                    password,
+                    org_name: orgName || undefined,
+                });
+                useAuthStore.getState().setUser(result);
+                onSuccess(result.token);
             } else {
-                setError('用户名或密码不能为空');
+                const result = await authApi.login({ username, password });
+                useAuthStore.getState().setUser(result);
+                onSuccess(result.token);
             }
-        }, 1000);
+        } catch (err: any) {
+            setError(err.message || '操作失败，请稍后重试');
+        } finally {
+            setLoading(false);
+        }
     };
 
     return (
