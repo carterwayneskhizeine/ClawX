@@ -35,8 +35,21 @@ export function Classroom() {
     });
 
     return (
-        <div className="flex flex-col gap-8 pb-10 animate-in fade-in slide-in-from-bottom-4 duration-500">
-            {/* Header */}
+        <div className="relative w-full min-h-[80vh] animate-in fade-in slide-in-from-bottom-4 duration-500">
+            {/* Development Overlay */}
+            <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-background/40 backdrop-blur-md rounded-2xl">
+                <div className="flex flex-col items-center gap-4 bg-background/90 p-10 rounded-3xl shadow-2xl border border-border/50 animate-in zoom-in-95 duration-500">
+                    <span className="text-6xl drop-shadow-md">🚧</span>
+                    <h2 className="text-3xl font-black tracking-tight text-foreground">功能正在开发中</h2>
+                    <p className="text-muted-foreground text-center max-w-sm">
+                        工程师们正在加班加点为您构建学习课堂，带来海量优质课程。敬请期待！
+                    </p>
+                </div>
+            </div>
+
+            {/* Blurred Content */}
+            <div className="flex flex-col gap-8 pb-10 blur-[6px] pointer-events-none select-none opacity-50">
+                {/* Header */}
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
                 <div className="space-y-1">
                     <h1 className="text-3xl font-bold tracking-tight">学习课堂</h1>
@@ -92,6 +105,7 @@ export function Classroom() {
                     <p className="text-lg text-muted-foreground">未找到相关课程，换个关键词试试？</p>
                 </div>
             )}
+            </div>
         </div>
     );
 }
