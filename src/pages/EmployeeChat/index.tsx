@@ -181,7 +181,7 @@ export function EmployeeChat() {
                         <ChevronLeft className="h-5 w-5" />
                     </Button>
                     <Avatar className="h-10 w-10 border-2 border-primary/20 p-0.5">
-                        <AvatarImage src={`https://picsum.photos/seed/clawx-ai-${agentId}/200`} />
+                        <AvatarImage src={agent.identity?.avatarUrl || `https://picsum.photos/seed/${agentId}/200`} />
                         <AvatarFallback className="bg-primary/5 text-lg">
                             {agent.identity?.emoji || '🤖'}
                         </AvatarFallback>
